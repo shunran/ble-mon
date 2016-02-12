@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project>
+	<configuration id="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1855220304" name="Default">
+		<extension point="org.eclipse.cdt.core.LanguageSettingsProvider">
+			<provider copy-of="extension" id="org.eclipse.cdt.ui.UserLanguageSettingsProvider"/>
+			<provider-reference id="org.eclipse.cdt.core.ReferencedProjectsLanguageSettingsProvider" ref="shared-provider"/>
+			<provider class="org.eclipse.cdt.managedbuilder.language.settings.providers.GCCBuildCommandParser" id="org.eclipse.cdt.managedbuilder.core.GCCBuildCommandParser" keep-relative-paths="false" name="CDT GCC Build Output Parser" parameter="(.*gcc)|(.*[gc]\+\+)" prefer-non-shared="true" resource-scope="per-project" store-entries-with-project="true">
+				<language id="org.eclipse.cdt.core.gcc">
+					<resource project-relative-path="">
+						<entry kind="includePath" name="/${ProjName}/config">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/boards">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/libraries/util"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/drivers_nrf/pstorage"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/toolchain/gcc"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/toolchain"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/ble/common"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/drivers_nrf/common"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/ble/ble_advertising"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/drivers_nrf/config"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/libraries/trace"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/drivers_nrf/gpiote"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/ble/device_manager"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/drivers_nrf/uart"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/libraries/uart"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/device"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/softdevice/common/softdevice_handler"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/softdevice/s110/headers"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/drivers_nrf/delay"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/libraries/timer"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/drivers_nrf/hal"/>
+						<entry kind="includePath" name="C:/nRF51_SDK_10.0.0/components/libraries/button"/>
+						<entry kind="macro" name="BLE_STACK_SUPPORT_REQD" value=""/>
+						<entry kind="macro" name="BOARD_BLE400" value=""/>
+						<entry kind="macro" name="NRF51" value=""/>
+						<entry kind="macro" name="S110" value=""/>
+						<entry kind="macro" name="SOFTDEVICE_PRESENT" value=""/>
+						<entry kind="macro" name="SWI_DISABLE0" value=""/>
+					</resource>
+				</language>
+			</provider>
+			<provider class="org.eclipse.cdt.managedbuilder.language.settings.providers.GCCBuiltinSpecsDetector" console="false" env-hash="1669642994008943859" id="ilg.gnuarmeclipse.managedbuild.cross.GCCBuiltinSpecsDetector" keep-relative-paths="false" name="CDT GCC Built-in Compiler Settings Cross ARM" parameter="arm-none-eabi-gcc ${FLAGS} ${cross_toolchain_flags} -E -P -v -dD &quot;${INPUTS}&quot;" prefer-non-shared="true">
+				<language-scope id="org.eclipse.cdt.core.gcc"/>
+				<language-scope id="org.eclipse.cdt.core.g++"/>
+			</provider>
+			<provider-reference id="org.eclipse.cdt.managedbuilder.core.MBSLanguageSettingsProvider" ref="shared-provider"/>
+		</extension>
+	</configuration>
+</project>
