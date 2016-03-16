@@ -15,6 +15,8 @@
 #include "nordic_common.h"
 #include <nrf.h>
 
+#include "nrf_drv_clock.h"
+#include "nrf_delay.h"
 #include "app_error.h"
 #include "ble.h"
 #include "ble_hci.h"
@@ -31,12 +33,18 @@
 //#include "bsp.h"
 //#include "bsp_btn_ble.h"
 
+// Scanner
+#include "btle.h"
+
 #define IS_SRVC_CHANGED_CHARACT_PRESENT  1                                          /**< Include or not the service_changed characteristic. if not enabled, the server's database cannot be changed for the lifetime of the device*/
 
-#define DEVICE_NAME                      "v0"                               /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                      "sensor"                               /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME                "NordicSemiconductor"                      /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                 300                                        /**< The advertising interval (in units of 0.625 ms. This value corresponds to 25 ms). */
-#define APP_ADV_TIMEOUT_IN_SECONDS       180                                        /**< The advertising timeout in units of seconds. */
+#define APP_ADV_TIMEOUT_IN_SECONDS       0                                         /**< The advertising timeout in units of seconds. */
+
+#define SLOW_APP_ADV_INTERVAL			160
+#define APP_GAP_TX_POWER -30		/** Radio transmit power in dBm (accepted values are -40, -30, -20, -16, -12, -8, -4, 0, and 4 dBm). */
 
 #define APP_TIMER_PRESCALER              0                                          /**< Value of the RTC1 PRESCALER register. */
 #define APP_TIMER_OP_QUEUE_SIZE          4                                          /**< Size of timer operation queues. */
@@ -63,9 +71,26 @@ static dm_application_instance_t        m_app_handle;                           
 
 static uint16_t                          m_conn_handle = BLE_CONN_HANDLE_INVALID;   /**< Handle of the current connection. */
 
+APP_TIMER_DEF(m_app_timer_id);
 /* YOUR_JOB: Declare all services structure your application is using
 static ble_xx_service_t                     m_xxs;
 static ble_yy_service_t                     m_yys;
+*/
+//#define TIMESLOT_LENGTH_US 10000
+//#define TIMESLOT_DISTANCE_US 20000
+/* These are the parameters for the scanner running in the timeslot *
+static btle_cmd_param_le_write_scan_parameters_t scan_param = {
+  BTLE_SCAN_TYPE_PASSIVE,          / Active scanning. SCAN_REQ packets may be sent /
+  20000,           / Time from controller starts its last scan until it begins the next scan /
+  10000,             / Duration of the scan /
+  BTLE_ADDR_TYPE_PUBLIC,          / Use public address type /
+  BTLE_SCAN_FILTER_ACCEPT_ANY     / Accept anyone (whitelist unsupported for now) /
+};
+
+static btle_cmd_param_le_write_scan_enable_t scan_enable = {
+  BTLE_SCAN_MODE_ENABLE,              / Enable scanner /
+  BTLE_SCAN_DUPLICATE_FILTER_DISABLE  / Do not filter duplicates /
+};
 */
 
 // YOUR_JOB: Use UUIDs for service(s) used in your application.
@@ -89,25 +114,72 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 }
 
 
+/**
+ * Timeout handler for appl timer.
+ */
+static void timeout_handler(void * p_context)
+{
+    nrf_gpio_pin_set(LED_3);
+    nrf_delay_ms(20);
+    nrf_gpio_pin_clear(LED_3);
+	//const uint8_t leds_list[LEDS_NUMBER] = LEDS_LIST;
+
+    // Toggle LEDs.
+	/*
+        for (int i = 0; i < LEDS_NUMBER; i++)
+        {
+            LEDS_INVERT(1 << leds_list[i]);
+            nrf_delay_ms(10);
+        }
+        for (int i = 0; i < LEDS_NUMBER; i++)
+        {
+            LEDS_INVERT(1 << leds_list[i]);
+            nrf_delay_ms(10);
+        }
+        */
+  //  UNUSED_PARAMETER(p_context);
+  //SEGGER_RTT_WriteString (0, “–> in timeout handler\n”);
+ //stop the timer(s):
+  //uint32_t err_code;
+  //err_code = app_timer_stop(m_app_timer_id);
+  //APP_ERROR_CHECK(err_code);
+}
+
+void led_stripe() {
+	const uint8_t leds_list[LEDS_NUMBER] = LEDS_LIST;
+	for (int i = 0; i < LEDS_NUMBER; i++)
+	        {
+	            LEDS_INVERT(1 << leds_list[i]);
+	            nrf_delay_ms(100);
+	        }
+	        for (int i = 0; i < LEDS_NUMBER; i++)
+	        {
+	            LEDS_INVERT(1 << leds_list[i]);
+	            nrf_delay_ms(100);
+	        }
+}
+
 /**@brief Function for the Timer initialization.
  *
  * @details Initializes the timer module. This creates and starts application timers.
  */
 static void timers_init(void)
 {
+	uint32_t err_code;
+//	 uint32_t err_code = nrf_drv_clock_init(NULL);
+//	 APP_ERROR_CHECK(err_code);
+//	 nrf_drv_clock_lfclk_request();
 
     // Initialize timer module.
     APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
-
-    // Create timers.
+    // Create timers.ˇ
 
     /* YOUR_JOB: Create any timers to be used by the application.
                  Below is an example of how to create a timer.
                  For every new timer needed, increase the value of the macro APP_TIMER_MAX_TIMERS by
-                 one.
-    uint32_t err_code;
-    err_code = app_timer_create(&m_app_timer_id, APP_TIMER_MODE_REPEATED, timer_timeout_handler);
-    APP_ERROR_CHECK(err_code); */
+                 one. */
+    err_code = app_timer_create(&m_app_timer_id, APP_TIMER_MODE_REPEATED, timeout_handler);
+    APP_ERROR_CHECK(err_code); /**/
 }
 
 
@@ -124,14 +196,14 @@ static void gap_params_init(void)
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
 
+
+    sd_ble_gap_tx_power_set(APP_GAP_TX_POWER);
+
+
     err_code = sd_ble_gap_device_name_set(&sec_mode,
                                           (const uint8_t *)DEVICE_NAME,
                                           strlen(DEVICE_NAME));
     APP_ERROR_CHECK(err_code);
-
-    /* YOUR_JOB: Use an appearance value matching the application's use case.
-    err_code = sd_ble_gap_appearance_set(BLE_APPEARANCE_);
-    APP_ERROR_CHECK(err_code); */
 
     memset(&gap_conn_params, 0, sizeof(gap_conn_params));
 
@@ -259,11 +331,10 @@ static void conn_params_init(void)
 */
 static void application_timers_start(void)
 {
-    /* YOUR_JOB: Start your timers. below is an example of how to start a timer.
+	uint32_t timeout_ticks = 2 * 32768;
     uint32_t err_code;
-    err_code = app_timer_start(m_app_timer_id, TIMER_INTERVAL, NULL);
-    APP_ERROR_CHECK(err_code); */
-   
+    err_code = app_timer_start(m_app_timer_id, timeout_ticks, NULL);
+    APP_ERROR_CHECK(err_code);
 }
 
 
@@ -518,7 +589,7 @@ static void advertising_init(void)
     memset(&advdata, 0, sizeof(advdata));
 
     advdata.name_type               = BLE_ADVDATA_FULL_NAME;
-    advdata.include_appearance      = true;
+    advdata.include_appearance      = false;
     advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
     advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
     advdata.uuids_complete.p_uuids  = m_adv_uuids;
@@ -527,6 +598,8 @@ static void advertising_init(void)
     options.ble_adv_fast_enabled  = BLE_ADV_FAST_ENABLED;
     options.ble_adv_fast_interval = APP_ADV_INTERVAL;
     options.ble_adv_fast_timeout  = APP_ADV_TIMEOUT_IN_SECONDS;
+
+    //options.ble_ad
 
     err_code = ble_advertising_init(&advdata, NULL, &options, on_adv_evt, NULL);
     APP_ERROR_CHECK(err_code);
@@ -564,28 +637,13 @@ static void power_manage(void)
     APP_ERROR_CHECK(err_code);
 }
 
-int initialize_observer(void)
+/*int initialize_observer(void)
 {
-#define TIMESLOT_LENGTH_US 10000
-#define TIMESLOT_DISTANCE_US 20000
-/* These are the parameters for the scanner running in the timeslot */
-	static btle_cmd_param_le_write_scan_parameters_t scan_param = {
-	  BTLE_SCAN_TYPE_ACTIVE,          /* Active scanning. SCAN_REQ packets may be sent */
-	  TIMESLOT_DISTANCE_US,           /* Time from controller starts its last scan until it begins the next scan */
-	  TIMESLOT_LENGTH_US,             /* Duration of the scan */
-	  BTLE_ADDR_TYPE_PUBLIC,          /* Use public address type */
-	  BTLE_SCAN_FILTER_ACCEPT_ANY     /* Accept anyone (whitelist unsupported for now) */
-	};
-
-	static btle_cmd_param_le_write_scan_enable_t scan_enable = {
-	  BTLE_SCAN_MODE_ENABLE,              /* Enable scanner */
-	  BTLE_SCAN_DUPLICATE_FILTER_DISABLE  /* Do not filter duplicates */
-	};
   uint8_t err_code = NRF_SUCCESS;
   nrf_report_t report;
   btle_status_codes_t btle_err_code = BTLE_STATUS_CODE_SUCCESS;
 
-  /* Silence the compiler */
+  / Silence the compiler /
   (void) g_sd_assert_pc;
   (void) g_evt;
   (void) err_code;
@@ -596,7 +654,7 @@ int initialize_observer(void)
   nrf_gpio_range_cfg_output (0, 7);
   nrf_gpio_pin_set (LED_0);
 
-  /* Setup UART */
+  / Setup UART *
   //initialize_uart();
 
   __LOG("Program init", __FUNCTION__);
@@ -627,15 +685,22 @@ int initialize_observer(void)
   btle_err_code = btle_scan_enable_set (scan_enable);
   ASSERT (btle_err_code == BTLE_STATUS_CODE_SUCCESS);
   __LOG ("Scanner enabled");
-}
+}*/
 
 
 /**@brief Function for application main entry.
  */
 int main(void)
 {
-    uint32_t err_code;
-    bool erase_bonds;
+   uint32_t err_code;
+   bool erase_bonds;
+
+   LEDS_CONFIGURE(LEDS_MASK);
+
+    //err_code = sd_softdevice_enable(NRF_CLOCK_LFCLKSRC_XTAL_20_PPM, true);
+    //SOFTDEVICE_HANDLER_INIT(NRF_CLOCK_LFCLKSRC_XTAL_20_PPM, NULL); // Use scheduler
+    //APP_ERROR_CHECK(err_code);
+    //SD_SOFTDEVICE_ENABLE();
 
     // Initialize.
     timers_init();
@@ -648,15 +713,25 @@ int main(void)
     advertising_init();
     services_init();
     conn_params_init();
+    //nrf_gpio_cfg_output(LED_0);
 
     // Start execution.
     application_timers_start();
     err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
+    led_stripe();
 
     // Enter main loop.
     for (;;)
     {
+        //LEDS_ON(LED_0_MASK);
+        //NRF_GPIO->OUTSET(LED_0_MASK);
+        //nrf_gpio_pin_set(LED_0);
+        //nrf_delay_ms(100);
+        //nrf_gpio_pin_clear(LED_0);
+       // NRF_GPIO->OUTCLR(LED_0_MASK);
+
+        //LEDS_OFF(LED_0_MASK);
         power_manage();
     }
 }

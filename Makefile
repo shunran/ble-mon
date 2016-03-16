@@ -54,6 +54,7 @@ $(SDK_PATH)/components/drivers_nrf/common/nrf_drv_common.c \
 $(SDK_PATH)/components/drivers_nrf/gpiote/nrf_drv_gpiote.c \
 $(SDK_PATH)/components/drivers_nrf/uart/nrf_drv_uart.c \
 $(SDK_PATH)/components/drivers_nrf/pstorage/pstorage.c \
+$(SDK_PATH)/components/drivers_nrf/clock/nrf_drv_clock.c \
  main.c \
 $(SDK_PATH)/components/ble/common/ble_advdata.c \
 $(SDK_PATH)/components/ble/ble_advertising/ble_advertising.c \
@@ -70,6 +71,7 @@ ASM_SOURCE_FILES  = $(abspath $(SDK_PATH)/components/toolchain/gcc/gcc_startup_n
 
 #includes common to all targets
 INC_PATHS  = -Iconfig
+INC_PATHS += -Iobserver
 INC_PATHS += -Iboards
 INC_PATHS += -I$(SDK_PATH)/components/libraries/util
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/pstorage
@@ -87,8 +89,9 @@ INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/uart
 INC_PATHS += -I$(SDK_PATH)/components/libraries/uart
 INC_PATHS += -I$(SDK_PATH)/components/device
 INC_PATHS += -I$(SDK_PATH)/components/softdevice/common/softdevice_handler
-INC_PATHS += -I$(SDK_PATH)/components/softdevice/s110/headers
+INC_PATHS += -I$(SDK_PATH)/components/softdevice/s130/headers
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/delay
+INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/clock
 INC_PATHS += -I$(SDK_PATH)/components/libraries/timer
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/hal
 INC_PATHS += -I$(SDK_PATH)/components/libraries/button
@@ -104,12 +107,12 @@ BUILD_DIRECTORIES := $(sort $(OBJECT_DIRECTORY) $(OUTPUT_BINARY_DIRECTORY) $(LIS
 CFLAGS  = -DBOARD_BLE400
 CFLAGS += -DSOFTDEVICE_PRESENT
 CFLAGS += -DNRF51
-CFLAGS += -DS110
+CFLAGS += -DS130
 CFLAGS += -DBLE_STACK_SUPPORT_REQD
 CFLAGS += -DSWI_DISABLE0
 CFLAGS += -mcpu=cortex-m0
 CFLAGS += -mthumb -mabi=aapcs --std=gnu99
-CFLAGS += -Wall -Werror -O3
+CFLAGS += -Wall -Werror -O0 -g3
 CFLAGS += -mfloat-abi=soft
 # keep every function in separate section. This will allow linker to dump unused functions
 CFLAGS += -ffunction-sections -fdata-sections -fno-strict-aliasing
@@ -129,7 +132,7 @@ ASMFLAGS += -x assembler-with-cpp
 ASMFLAGS += -DBOARD_BLE400
 ASMFLAGS += -DSOFTDEVICE_PRESENT
 ASMFLAGS += -DNRF51
-ASMFLAGS += -DS110
+ASMFLAGS += -DS130
 ASMFLAGS += -DBLE_STACK_SUPPORT_REQD
 ASMFLAGS += -DSWI_DISABLE0
 #default target - first one defined
@@ -220,12 +223,13 @@ cleanobj:
 	$(RM) $(BUILD_DIRECTORIES)/*.o
 
 flash: $(MAKECMDGOALS)
-	@echo Flashing: $(OUTPUT_BINARY_DIRECTORY)/$<.hex
-	nrfjprog --program $(OUTPUT_BINARY_DIRECTORY)/$<.hex -f nrf51  --sectorerase
-	nrfjprog --reset
+	@echo Flashing: $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).hex
+	$(OPEN_OCD) -c "program $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).hex verify reset exit"
 
 ## Flash softdevice
 flash_softdevice:
-	@echo Flashing: s110_nrf51_8.0.0_softdevice.hex
-	nrfjprog --program $(SDK_PATH)/components/softdevice/s110/hex/s110_nrf51_8.0.0_softdevice.hex -f nrf51 --chiperase
-	nrfjprog --reset
+	@echo Flashing: s130_nrf51_8.0.0_softdevice.hex
+	$(OPEN_OCD) -c "program $(SDK_PATH)/components/softdevice/s130/hex/s130_nrf51_1.0.0_softdevice.hex verify reset exit"
+	
+openocd: 
+	$(OPEN_OCD)

@@ -22,11 +22,11 @@
 #define LED_4          22
 #define LED_STOP       22
 
-//#define BUTTON_START   16
-//#define BUTTON_0       16
-//#define BUTTON_1       17
-//#define BUTTON_STOP    17
-//#define BUTTON_PULL    NRF_GPIO_PIN_PULLUP
+#define BUTTON_START   16
+#define BUTTON_0       16
+#define BUTTON_1       17
+#define BUTTON_STOP    17
+#define BUTTON_PULL    NRF_GPIO_PIN_PULLUP
 
 #define LED_0_MASK    (1<<LED_0)
 #define LED_1_MASK    (1<<LED_1)
