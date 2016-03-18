@@ -42,27 +42,30 @@ remduplicates = $(strip $(if $1,$(firstword $1) $(call remduplicates,$(filter-ou
 
 #source common to all targets
 C_SOURCE_FILES += \
-$(SDK_PATH)/components/libraries/button/app_button.c \
 $(SDK_PATH)/components/libraries/util/app_error.c \
 $(SDK_PATH)/components/libraries/timer/app_timer.c \
-$(SDK_PATH)/components/libraries/trace/app_trace.c \
+$(SDK_PATH)/components/libraries/fifo/app_fifo.c \
 $(SDK_PATH)/components/libraries/util/nrf_assert.c \
 $(SDK_PATH)/components/libraries/uart/retarget.c \
-$(SDK_PATH)/components/libraries/uart/app_uart.c \
+$(SDK_PATH)/components/libraries/uart/app_uart_fifo.c \
 $(SDK_PATH)/components/drivers_nrf/delay/nrf_delay.c \
 $(SDK_PATH)/components/drivers_nrf/common/nrf_drv_common.c \
 $(SDK_PATH)/components/drivers_nrf/gpiote/nrf_drv_gpiote.c \
 $(SDK_PATH)/components/drivers_nrf/uart/nrf_drv_uart.c \
-$(SDK_PATH)/components/drivers_nrf/pstorage/pstorage.c \
 $(SDK_PATH)/components/drivers_nrf/clock/nrf_drv_clock.c \
  main.c \
+ uart.c \
 $(SDK_PATH)/components/ble/common/ble_advdata.c \
-$(SDK_PATH)/components/ble/ble_advertising/ble_advertising.c \
 $(SDK_PATH)/components/ble/common/ble_conn_params.c \
 $(SDK_PATH)/components/ble/common/ble_srv_common.c \
-$(SDK_PATH)/components/ble/device_manager/device_manager_peripheral.c \
 $(SDK_PATH)/components/toolchain/system_nrf51.c \
-$(SDK_PATH)/components/softdevice/common/softdevice_handler/softdevice_handler.c \
+$(SDK_PATH)/components/softdevice/common/softdevice_handler/softdevice_handler.c
+# $(SDK_PATH)/components/libraries/trace/app_trace.c \
+# $(SDK_PATH)/components/ble/ble_advertising/ble_advertising.c \
+# $(SDK_PATH)/components/drivers_nrf/pstorage/pstorage.c \
+# $(SDK_PATH)/components/libraries/button/app_button.c
+# $(SDK_PATH)/components/libraries/uart/retarget.c \
+# $(SDK_PATH)/components/ble/device_manager/device_manager_peripheral.c \
 # $(abspath ../../../../../bsp/bsp.c) \
 # $(abspath ../../../../../bsp/bsp_btn_ble.c) \
 
@@ -71,20 +74,21 @@ ASM_SOURCE_FILES  = $(abspath $(SDK_PATH)/components/toolchain/gcc/gcc_startup_n
 
 #includes common to all targets
 INC_PATHS  = -Iconfig
-INC_PATHS += -Iobserver
+# INC_PATHS += -Iobserver
 INC_PATHS += -Iboards
 INC_PATHS += -I$(SDK_PATH)/components/libraries/util
-INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/pstorage
+#INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/pstorage
 INC_PATHS += -I$(SDK_PATH)/components/toolchain/gcc
 INC_PATHS += -I$(SDK_PATH)/components/toolchain
 INC_PATHS += -I$(SDK_PATH)/components/ble/common
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/common
-INC_PATHS += -I$(SDK_PATH)/components/ble/ble_advertising
+# INC_PATHS += -I$(SDK_PATH)/components/ble/ble_advertising
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/config
 # INC_PATHS += -I$(abspath ../../../../../bsp)
-INC_PATHS += -I$(SDK_PATH)/components/libraries/trace
+# INC_PATHS += -I$(SDK_PATH)/components/libraries/trace
+INC_PATHS += -I$(SDK_PATH)/components/libraries/fifo
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/gpiote
-INC_PATHS += -I$(SDK_PATH)/components/ble/device_manager
+# INC_PATHS += -I$(SDK_PATH)/components/ble/device_manager
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/uart
 INC_PATHS += -I$(SDK_PATH)/components/libraries/uart
 INC_PATHS += -I$(SDK_PATH)/components/device
@@ -94,7 +98,7 @@ INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/delay
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/clock
 INC_PATHS += -I$(SDK_PATH)/components/libraries/timer
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/hal
-INC_PATHS += -I$(SDK_PATH)/components/libraries/button
+# INC_PATHS += -I$(SDK_PATH)/components/libraries/button
 
 OBJECT_DIRECTORY = _build
 LISTING_DIRECTORY = $(OBJECT_DIRECTORY)
@@ -110,8 +114,10 @@ CFLAGS += -DNRF51
 CFLAGS += -DS130
 CFLAGS += -DBLE_STACK_SUPPORT_REQD
 CFLAGS += -DSWI_DISABLE0
+CFLAGS += -DENABLE_DEBUG_LOG_SUPPORT
 CFLAGS += -mcpu=cortex-m0
 CFLAGS += -mthumb -mabi=aapcs --std=gnu99
+# -Wall
 CFLAGS += -Wall -Werror -O0 -g3
 CFLAGS += -mfloat-abi=soft
 # keep every function in separate section. This will allow linker to dump unused functions
@@ -135,6 +141,7 @@ ASMFLAGS += -DNRF51
 ASMFLAGS += -DS130
 ASMFLAGS += -DBLE_STACK_SUPPORT_REQD
 ASMFLAGS += -DSWI_DISABLE0
+ASMFLAGS += -DENABLE_DEBUG_LOG_SUPPORT
 #default target - first one defined
 default: clean ble-mon
 
