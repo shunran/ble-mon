@@ -136,14 +136,27 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
  */
 static void timeout_handler(void * p_context)
 {
-	uint32_t this_time = NRF_RTC1->COUNTER;
+	const uint32_t this_time = NRF_RTC1->COUNTER;
 	static uint32_t last_time = 0;
-	last_time++;
-
+	static uint8_t epoch = 0;
+	// First call, only constant can be assigned in static declaration.
+	if (last_time == 0) last_time = this_time;
+	// OVERFLW event has happened.
+	if (last_time > this_time) {
+		++epoch;
+	}
+	last_time = this_time;
+	/*
+	uint32_t swapped = ((this_time>>24)&0xff) | // move byte 3 to byte 0
+	                    ((this_time<<8)&0xff0000) | // move byte 1 to byte 2
+	                    ((this_time>>8)&0xff00) | // move byte 2 to byte 1
+	                    ((this_time<<24)&0xff000000); // byte 0 to byte 3
+	                    */
     nrf_gpio_pin_set(LED_3);
     nrf_delay_ms(20);
     nrf_gpio_pin_clear(LED_3);
-    __LOG("timeout handler %x,%x,%x", this_time, last_time, 32);
+    __LOG("epoch %d and clock %u.", epoch, this_time);
+    //__LOG("original %x.", this_time);
 	//const uint8_t leds_list[LEDS_NUMBER] = LEDS_LIST;
 
   //  UNUSED_PARAMETER(p_context);
@@ -354,7 +367,7 @@ static void conn_params_init(void)
 */
 static void application_timers_start(void)
 {
-	uint32_t timeout_ticks = 3 * 32768;
+	uint32_t timeout_ticks = 100000; //3 * 32768;
     uint32_t err_code;
     err_code = app_timer_start(m_app_timer_id, timeout_ticks, NULL);
     APP_ERROR_CHECK(err_code);
