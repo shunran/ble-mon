@@ -53,8 +53,9 @@ $(SDK_PATH)/components/drivers_nrf/common/nrf_drv_common.c \
 $(SDK_PATH)/components/drivers_nrf/gpiote/nrf_drv_gpiote.c \
 $(SDK_PATH)/components/drivers_nrf/uart/nrf_drv_uart.c \
 $(SDK_PATH)/components/drivers_nrf/clock/nrf_drv_clock.c \
- main.c \
  uart.c \
+ timer.c \
+ main.c \
 $(SDK_PATH)/components/ble/common/ble_advdata.c \
 $(SDK_PATH)/components/ble/common/ble_conn_params.c \
 $(SDK_PATH)/components/ble/common/ble_srv_common.c \

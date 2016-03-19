@@ -27,7 +27,6 @@
 #include "ble_conn_params.h"
 #include "boards.h"
 #include "softdevice_handler.h"
-#include "app_timer.h"
 //#include "device_manager.h"
 //#include "pstorage.h"
 //#include "app_trace.h"
@@ -35,6 +34,7 @@
 //#include "bsp_btn_ble.h"
 
 #include "uart.h"
+#include "timer.h"
 
 // Scanner
 //#include "btle.h"
@@ -49,16 +49,14 @@
 //#define SLOW_APP_ADV_INTERVAL			160
 #define APP_GAP_TX_POWER -30		/** Radio transmit power in dBm (accepted values are -40, -30, -20, -16, -12, -8, -4, 0, and 4 dBm). */
 
-#define APP_TIMER_PRESCALER              0                                          /**< Value of the RTC1 PRESCALER register. */
-#define APP_TIMER_OP_QUEUE_SIZE          4                                          /**< Size of timer operation queues. */
 
 #define MIN_CONN_INTERVAL                MSEC_TO_UNITS(100, UNIT_1_25_MS)           /**< Minimum acceptable connection interval (0.1 seconds). */
 #define MAX_CONN_INTERVAL                MSEC_TO_UNITS(200, UNIT_1_25_MS)           /**< Maximum acceptable connection interval (0.2 second). */
 #define SLAVE_LATENCY                    0                                          /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                 MSEC_TO_UNITS(4000, UNIT_10_MS)            /**< Connection supervisory timeout (4 seconds). */
 
-#define FIRST_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000, APP_TIMER_PRESCALER) /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
-#define NEXT_CONN_PARAMS_UPDATE_DELAY    APP_TIMER_TICKS(30000, APP_TIMER_PRESCALER)/**< Time between each call to sd_ble_gap_conn_param_update after the first call (30 seconds). */
+//#define FIRST_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000, APP_TIMER_PRESCALER) /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
+//#define NEXT_CONN_PARAMS_UPDATE_DELAY    APP_TIMER_TICKS(30000, APP_TIMER_PRESCALER)/**< Time between each call to sd_ble_gap_conn_param_update after the first call (30 seconds). */
 #define MAX_CONN_PARAMS_UPDATE_COUNT     3                                          /**< Number of attempts before giving up the connection parameter negotiation. */
 
 #define SEC_PARAM_BOND                   1                                          /**< Perform bonding. */
@@ -74,28 +72,11 @@
 
 static uint16_t                          m_conn_handle = BLE_CONN_HANDLE_INVALID;   /**< Handle of the current connection. */
 
-APP_TIMER_DEF(m_app_timer_id);
-
 static ble_gap_adv_params_t m_adv_params;
 
-#define UART_TX_BUF_SIZE        256                             /**< UART TX buffer size. */
-#define UART_RX_BUF_SIZE        256                             /**< UART RX buffer size. */
+#define TIMESLOT_LENGTH_US 10000
+#define TIMESLOT_DISTANCE_US 20000
 
-/* YOUR_JOB: Declare all services structure your application is using
-static ble_xx_service_t                     m_xxs;
-static ble_yy_service_t                     m_yys;
-*/
-
-
-//#ifdef USE_UART_LOGGING
-//#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-//#define __LOG(F, ...) (test_logf("TIMESLOT_TEST_LOG: %s: %d: " #F "\r\n", __FILENAME__, __LINE__, ##__VA_ARGS__))
-//#else
-//  #define __LOG(F, ...) (void)__NOP()
-//#endif
-
-//#define TIMESLOT_LENGTH_US 10000
-//#define TIMESLOT_DISTANCE_US 20000
 // These are the parameters for the scanner running in the timeslot
 //static btle_cmd_param_le_write_scan_parameters_t scan_param = {
 //  BTLE_SCAN_TYPE_PASSIVE,          /* Active scanning. SCAN_REQ packets may be sent */
@@ -130,42 +111,6 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
     app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
 
-
-/**
- * Timeout handler for appl timer.
- */
-static void timeout_handler(void * p_context)
-{
-	const uint32_t this_time = NRF_RTC1->COUNTER;
-	static uint32_t last_time = 0;
-	static uint8_t epoch = 0;
-	// First call, only constant can be assigned in static declaration.
-	if (last_time == 0) last_time = this_time;
-	// OVERFLW event has happened.
-	if (last_time > this_time) {
-		++epoch;
-	}
-	last_time = this_time;
-	/*
-	uint32_t swapped = ((this_time>>24)&0xff) | // move byte 3 to byte 0
-	                    ((this_time<<8)&0xff0000) | // move byte 1 to byte 2
-	                    ((this_time>>8)&0xff00) | // move byte 2 to byte 1
-	                    ((this_time<<24)&0xff000000); // byte 0 to byte 3
-	                    */
-    nrf_gpio_pin_set(LED_3);
-    nrf_delay_ms(20);
-    nrf_gpio_pin_clear(LED_3);
-    __LOG("epoch %d and clock %u.", epoch, this_time);
-    //__LOG("original %x.", this_time);
-	//const uint8_t leds_list[LEDS_NUMBER] = LEDS_LIST;
-
-  //  UNUSED_PARAMETER(p_context);
- //stop the timer(s):
-  //uint32_t err_code;
-  //err_code = app_timer_stop(m_app_timer_id);
-  //APP_ERROR_CHECK(err_code);
-}
-
 void led_stripe() {
 	const uint8_t leds_list[LEDS_NUMBER] = LEDS_LIST;
 	for (int i = 0; i < LEDS_NUMBER; i++)
@@ -178,29 +123,6 @@ void led_stripe() {
 	            LEDS_INVERT(1 << leds_list[i]);
 	            nrf_delay_ms(100);
 	        }
-}
-
-/**@brief Function for the Timer initialization.
- *
- * @details Initializes the timer module. This creates and starts application timers.
- */
-static void timers_init(void)
-{
-	uint32_t err_code;
-//	 uint32_t err_code = nrf_drv_clock_init(NULL);
-//	 APP_ERROR_CHECK(err_code);
-//	 nrf_drv_clock_lfclk_request();
-
-    // Initialize timer module.
-    APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
-    // Create timers.ˇ
-
-    /* YOUR_JOB: Create any timers to be used by the application.
-                 Below is an example of how to create a timer.
-                 For every new timer needed, increase the value of the macro APP_TIMER_MAX_TIMERS by
-                 one. */
-    err_code = app_timer_create(&m_app_timer_id, APP_TIMER_MODE_REPEATED, timeout_handler);
-    APP_ERROR_CHECK(err_code); /**/
 }
 
 
@@ -342,6 +264,7 @@ static void conn_params_error_handler(uint32_t nrf_error)
 
 /**@brief Function for initializing the Connection Parameters module.
  */
+/*
 static void conn_params_init(void)
 {
     uint32_t               err_code;
@@ -360,18 +283,10 @@ static void conn_params_init(void)
 
     err_code = ble_conn_params_init(&cp_init);
     APP_ERROR_CHECK(err_code);
-}
+}*/
 
 
-/**@brief Function for starting timers.
-*/
-static void application_timers_start(void)
-{
-	uint32_t timeout_ticks = 100000; //3 * 32768;
-    uint32_t err_code;
-    err_code = app_timer_start(m_app_timer_id, timeout_ticks, NULL);
-    APP_ERROR_CHECK(err_code);
-}
+
 
 
 /**@brief Function for putting the chip into sleep mode.
@@ -694,7 +609,7 @@ int main(void)
     //conn_params_init();
 
     // Start execution.
-    application_timers_start();
+    timers_start();
     advertising_start();
    	__LOG("Started");
 

@@ -5,6 +5,8 @@
 /**@brief Disable logging to UART by commenting out this line. It is recomended to do this if
  * if you want to study timing in the example using a logic analyzer.
  */
+#ifndef UART_H_
+#define UART_H_
 #define USE_UART_LOG
 
 /**@brief Macro defined to output log data on the UART or not, based on the USE_UART_LOGGING flag.
@@ -25,3 +27,4 @@ void test_logf(const char *fmt, ...);
 void initialize_uart(void);
 
 void simple_uart_putstring(const uint8_t * str);
+#endif
