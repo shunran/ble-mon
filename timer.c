@@ -12,6 +12,7 @@
 #include <string.h>
 #include "boards.h"
 #include "uart.h"
+#include "contact.h"
 #include "app_timer.h"
 
 APP_TIMER_DEF(m_app_timer_id);
