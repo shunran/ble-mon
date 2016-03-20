@@ -53,17 +53,19 @@ $(SDK_PATH)/components/drivers_nrf/common/nrf_drv_common.c \
 $(SDK_PATH)/components/drivers_nrf/gpiote/nrf_drv_gpiote.c \
 $(SDK_PATH)/components/drivers_nrf/uart/nrf_drv_uart.c \
 $(SDK_PATH)/components/drivers_nrf/clock/nrf_drv_clock.c \
- uart.c \
- timer.c \
- main.c \
+uart.c \
+timer.c \
+radio.c \
+main.c \
 $(SDK_PATH)/components/ble/common/ble_advdata.c \
 $(SDK_PATH)/components/ble/common/ble_conn_params.c \
 $(SDK_PATH)/components/ble/common/ble_srv_common.c \
 $(SDK_PATH)/components/toolchain/system_nrf51.c \
-$(SDK_PATH)/components/softdevice/common/softdevice_handler/softdevice_handler.c
+$(SDK_PATH)/components/softdevice/common/softdevice_handler/softdevice_handler.c \
+$(SDK_PATH)/components/drivers_nrf/pstorage/pstorage.c \
+$(SDK_PATH)/components/ble/ble_services/ble_nus/ble_nus.c
 # $(SDK_PATH)/components/libraries/trace/app_trace.c \
 # $(SDK_PATH)/components/ble/ble_advertising/ble_advertising.c \
-# $(SDK_PATH)/components/drivers_nrf/pstorage/pstorage.c \
 # $(SDK_PATH)/components/libraries/button/app_button.c
 # $(SDK_PATH)/components/libraries/uart/retarget.c \
 # $(SDK_PATH)/components/ble/device_manager/device_manager_peripheral.c \
@@ -78,7 +80,7 @@ INC_PATHS  = -Iconfig
 # INC_PATHS += -Iobserver
 INC_PATHS += -Iboards
 INC_PATHS += -I$(SDK_PATH)/components/libraries/util
-#INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/pstorage
+INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/pstorage
 INC_PATHS += -I$(SDK_PATH)/components/toolchain/gcc
 INC_PATHS += -I$(SDK_PATH)/components/toolchain
 INC_PATHS += -I$(SDK_PATH)/components/ble/common
@@ -99,7 +101,8 @@ INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/delay
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/clock
 INC_PATHS += -I$(SDK_PATH)/components/libraries/timer
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/hal
-# INC_PATHS += -I$(SDK_PATH)/components/libraries/button
+INC_PATHS += -I$(SDK_PATH)/components/ble/ble_services/ble_nus
+
 
 OBJECT_DIRECTORY = _build
 LISTING_DIRECTORY = $(OBJECT_DIRECTORY)
@@ -238,6 +241,10 @@ flash: $(MAKECMDGOALS)
 flash_softdevice:
 	@echo Flashing: s130_nrf51_8.0.0_softdevice.hex
 	$(OPEN_OCD) -c "program $(SDK_PATH)/components/softdevice/s130/hex/s130_nrf51_1.0.0_softdevice.hex verify reset exit"
+
+flash_uart: $(MAKECMDGOALS)
+	@echo Flashing: $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).hex
+	$(OPEN_OCD) -c "program $(SDK_PATH)/examples/ble_peripheral/ble_app_uart/hex/ble_app_uart_s130_pca10028.hex verify reset exit"
 	
 openocd: 
 	$(OPEN_OCD)
