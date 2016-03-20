@@ -15,9 +15,9 @@
 #include "contact.h"
 #include "app_timer.h"
 
+#include "timer.h"
+
 APP_TIMER_DEF(m_app_timer_id);
-#define APP_TIMER_PRESCALER              0                                          /**< Value of the RTC1 PRESCALER register. */
-#define APP_TIMER_OP_QUEUE_SIZE          4                                          /**< Size of timer operation queues. */
 
 void timers_start(void)
 {

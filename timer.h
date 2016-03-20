@@ -8,6 +8,9 @@
 #ifndef TIMER_H_
 #define TIMER_H_
 
+#define APP_TIMER_PRESCALER              0                                          /**< Value of the RTC1 PRESCALER register. */
+#define APP_TIMER_OP_QUEUE_SIZE          4                                          /**< Size of timer operation queues. */
+
 void timers_init(void);
 void timeout_handler(void * p_context);
 void timers_start(void);

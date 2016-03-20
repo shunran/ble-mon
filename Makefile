@@ -63,9 +63,9 @@ $(SDK_PATH)/components/ble/common/ble_srv_common.c \
 $(SDK_PATH)/components/toolchain/system_nrf51.c \
 $(SDK_PATH)/components/softdevice/common/softdevice_handler/softdevice_handler.c \
 $(SDK_PATH)/components/drivers_nrf/pstorage/pstorage.c \
-$(SDK_PATH)/components/ble/ble_services/ble_nus/ble_nus.c
+$(SDK_PATH)/components/ble/ble_services/ble_nus/ble_nus.c \
+$(SDK_PATH)/components/ble/ble_advertising/ble_advertising.c
 # $(SDK_PATH)/components/libraries/trace/app_trace.c \
-# $(SDK_PATH)/components/ble/ble_advertising/ble_advertising.c \
 # $(SDK_PATH)/components/libraries/button/app_button.c
 # $(SDK_PATH)/components/libraries/uart/retarget.c \
 # $(SDK_PATH)/components/ble/device_manager/device_manager_peripheral.c \
@@ -85,10 +85,10 @@ INC_PATHS += -I$(SDK_PATH)/components/toolchain/gcc
 INC_PATHS += -I$(SDK_PATH)/components/toolchain
 INC_PATHS += -I$(SDK_PATH)/components/ble/common
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/common
-# INC_PATHS += -I$(SDK_PATH)/components/ble/ble_advertising
+INC_PATHS += -I$(SDK_PATH)/components/ble/ble_advertising
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/config
 # INC_PATHS += -I$(abspath ../../../../../bsp)
-# INC_PATHS += -I$(SDK_PATH)/components/libraries/trace
+INC_PATHS += -I$(SDK_PATH)/components/libraries/trace
 INC_PATHS += -I$(SDK_PATH)/components/libraries/fifo
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/gpiote
 # INC_PATHS += -I$(SDK_PATH)/components/ble/device_manager
@@ -118,7 +118,7 @@ CFLAGS += -DNRF51
 CFLAGS += -DS130
 CFLAGS += -DBLE_STACK_SUPPORT_REQD
 CFLAGS += -DSWI_DISABLE0
-CFLAGS += -DENABLE_DEBUG_LOG_SUPPORT
+# CFLAGS += -DENABLE_DEBUG_LOG_SUPPORT
 CFLAGS += -mcpu=cortex-m0
 CFLAGS += -mthumb -mabi=aapcs --std=gnu99
 # -Wall
@@ -145,7 +145,6 @@ ASMFLAGS += -DNRF51
 ASMFLAGS += -DS130
 ASMFLAGS += -DBLE_STACK_SUPPORT_REQD
 ASMFLAGS += -DSWI_DISABLE0
-ASMFLAGS += -DENABLE_DEBUG_LOG_SUPPORT
 #default target - first one defined
 default: clean ble-mon
 
@@ -242,9 +241,6 @@ flash_softdevice:
 	@echo Flashing: s130_nrf51_8.0.0_softdevice.hex
 	$(OPEN_OCD) -c "program $(SDK_PATH)/components/softdevice/s130/hex/s130_nrf51_1.0.0_softdevice.hex verify reset exit"
 
-flash_uart: $(MAKECMDGOALS)
-	@echo Flashing: $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).hex
-	$(OPEN_OCD) -c "program $(SDK_PATH)/examples/ble_peripheral/ble_app_uart/hex/ble_app_uart_s130_pca10028.hex verify reset exit"
-	
+## Start OpenOCD daemon for manual commands via telnet
 openocd: 
 	$(OPEN_OCD)
