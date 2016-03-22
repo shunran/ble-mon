@@ -27,6 +27,8 @@
 
 #include "uart.h"
 #include "timer.h"
+#include "contact.h"
+#include "storage.h"
 
 #define APP_GAP_TX_POWER	-30	/** Radio transmit power in dBm (accepted values are -40, -30, -20, -16, -12, -8, -4, 0, and 4 dBm). */
 #define MIN_CONN_INTERVAL	MSEC_TO_UNITS(20, UNIT_1_25_MS)	/**< Minimum acceptable connection interval (0.1 seconds). */
@@ -54,6 +56,8 @@ static uint16_t	m_conn_handle = BLE_CONN_HANDLE_INVALID;	/**< Handle of the curr
 
 static ble_uuid_t	m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};	/**< Universally unique service identifier. */
 
+//48bit addresses of whitelist
+//static int32_t known_devices[NUMBER_OF_DEVICES] = {0xC0FFEE0000, 0xC0FFEE0001};
 //static ble_gap_adv_params_t m_adv_params;
 
 /**
@@ -68,6 +72,11 @@ static const ble_gap_scan_params_t m_scan_param =
     0x0000          // No timeout.
 };
 
+
+static void on_ble_evt(ble_evt_t * p_ble_evt);
+static void conn_params_error_handler(uint32_t nrf_error);
+static void on_adv_evt(ble_adv_evt_t ble_adv_evt);
+
 /**@brief Function for dispatching a system event to interested modules.
  *
  * @details This function is called from the System event interrupt handler after a system
@@ -78,8 +87,8 @@ static const ble_gap_scan_params_t m_scan_param =
 
 static void sys_evt_dispatch(uint32_t sys_evt)
 {
-    pstorage_sys_event_handler(sys_evt);
     ble_advertising_on_sys_evt(sys_evt);
+    pstorage_sys_event_handler(sys_evt);
 }
 
 
@@ -93,12 +102,12 @@ static void sys_evt_dispatch(uint32_t sys_evt)
 static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
 {
     //dm_ble_evt_handler(p_ble_evt);
+    on_ble_evt(p_ble_evt);
     ble_conn_params_on_ble_evt(p_ble_evt);
     ble_nus_on_ble_evt(&m_nus, p_ble_evt);
     //TODO: no bsp
     //bsp_btn_ble_on_ble_evt(p_ble_evt);
     ble_advertising_on_ble_evt(p_ble_evt);
-    on_ble_evt(p_ble_evt);
     /*YOUR_JOB add calls to _on_ble_evt functions from each service your application is using
     ble_xxs_on_ble_evt(&m_xxs, p_ble_evt);
     ble_yys_on_ble_evt(&m_yys, p_ble_evt);
@@ -116,6 +125,7 @@ void ble_stack_init(void)
 
     // Initialize the SoftDevice handler module.
     SOFTDEVICE_HANDLER_INIT(NRF_CLOCK_LFCLKSRC_XTAL_20_PPM, NULL);
+    // TODO: use scheduler, maybe?
 
     // Enable BLE stack.
     ble_enable_params_t ble_enable_params;
@@ -147,7 +157,6 @@ void gap_params_init(void)
     ble_gap_conn_sec_mode_t sec_mode;
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
-
 
     sd_ble_gap_tx_power_set(APP_GAP_TX_POWER);
 
@@ -185,6 +194,15 @@ void gap_params_init(void)
     APP_ERROR_CHECK(err_code);// Check for errors
 }
 
+bool known_device(uint32_t device_address)
+{
+	bool found = false;
+	for (uint8_t i = 0; i < NUMBER_OF_DEVICES; i++) {
+
+	}
+	return found;
+}
+
 
 /**@brief Function for handling the Application's BLE Stack events.
  *
@@ -200,8 +218,21 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
         case BLE_GAP_EVT_ADV_REPORT:
         {
             const ble_gap_evt_adv_report_t *p_adv_report = &p_gap_evt->params.adv_report;
+            /*
+             TODO:
+             implement whitelist
+             for (uint8_t i = 0; i < NUMBER_OF_DEVICES; i++) {
+            		//DO NOTHING
+            	if p_adv_report->peer_addr.addr =
+            }*/
+            // Last number of address matters
+            if (p_adv_report->peer_addr.addr[0] == 2) {
+            	make_contact(p_adv_report->peer_addr.addr[0]);
+            	__LOG("Found No.2");
+            }
            //test_logf("Found target");
 		   //(unsigned int) NRF_RTC1->COUNTER,
+            /*
            __LOG("Target %02x%02x%02x%02x%02x%02x %ddBm",
                      p_adv_report->peer_addr.addr[5],
                      p_adv_report->peer_addr.addr[4],
@@ -210,21 +241,39 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
                      p_adv_report->peer_addr.addr[1],
                      p_adv_report->peer_addr.addr[0],
 					 p_adv_report->rssi
-                     );
+                     );*/
            break;
         }
         case BLE_GAP_EVT_CONNECTED:
             err_code = NRF_SUCCESS;
             // TODO: no bsp, rewrite
             //bsp_indication_set(BSP_INDICATE_CONNECTED);
+            sd_ble_gap_scan_stop();
+            __LOG("scan stopped");
             APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+            //scan_stop(); ????
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
+            scan_start();
+            __LOG("scan start");
             break;
 
+        case BLE_GAP_EVT_TIMEOUT:
+        	scan_start();
+        	__LOG("scan start");
+        	break;
+
+        case BLE_GATTS_EVT_TIMEOUT:
+            if (p_ble_evt->evt.gatts_evt.params.timeout.src == BLE_GATT_TIMEOUT_SRC_PROTOCOL)
+            {
+                err_code = sd_ble_gap_disconnect(m_conn_handle,
+                                                 BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+                APP_ERROR_CHECK(err_code);
+            }
+            break;
         default:
             // No implementation needed.
             break;
@@ -336,20 +385,52 @@ void advertising_start(void)
 /**@snippet [Handling the data received over BLE] */
 static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t length)
 {
+	uint32_t        err_code;
 	//static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
-    for (uint32_t i = 0; i < length; i++)
+    /*for (uint32_t i = 0; i < length; i++)
     {
         while(app_uart_put(p_data[i]) != NRF_SUCCESS);
     }
-    while(app_uart_put('\n') != NRF_SUCCESS);
+    while(app_uart_put('\n') != NRF_SUCCESS);*/
 
     if (*p_data == 'm' && length == 1) {
     	uint8_t * p_string = (uint8_t *) "HOUSTON, Im HERE\n";
     	uint16_t len = 17;
     	ble_nus_string_send(p_nus, p_string, len);
     }
+
+    if (*p_data == 'r' &&  length == 1) {
+    	ble_nus_string_send(p_nus, (uint8_t *) "***DATA TRANSFER***\n", 20);
+    	//uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
+    	//send_contact_to_nus();
+    	//ble_nus_string_send(p_nus, (uint8_t *) "Address: ", 8);
+    	//uint8_t dat[3] = {0xc0, 0xff, 0xee};
+    	//dat[0] = 0xc0;
+    	//dat[1] = 0xff;
+    	//dat[2] = 0xee;
+    	//* dat = (uint8_t *) 0xc0;
+
+    	//dat++;
+    	//* dat = (uint8_t *) 0xff;
+    	//dat++;
+    	//* dat = (uint8_t *) 0xee;
+    	//dat = dat -3;
+    	//__LOG("%s", p_dat);
+    	//sprintf((char *) dat, "%s", &c->address);
+    	//sprintf()
+    	uint8_t * p_dat = malloc(sizeof(uint8_t) * 4);
+    	err_code = read_contact_store(p_dat);
+    	APP_ERROR_CHECK(err_code);
+    	ble_nus_string_send(p_nus, p_dat, 4);
+    	//ble_nus_string_send(p_nus, (uint8_t *) "Last: ", 5);
+    	//ble_nus_string_send(p_nus, &c->last_time_seen, sizeof(c->last_time_seen));
+    	/* */
+    	//uint8_t * p_string = (uint8_t *) "HOUSTON, Im HERE\n";
+    	//uint16_t len = 17;
+    	//ble_nus_string_send(p_nus, p_string, len);
+    }
     /* */
-	//__LOG(p_data);
+	__LOG("NUSCON:%s", p_data);
 }
 /**@snippet [Handling the data received over BLE] */
 
@@ -419,4 +500,42 @@ void conn_params_init(void)
 
     err_code = ble_conn_params_init(&cp_init);
     APP_ERROR_CHECK(err_code);
+}
+
+
+/**@brief Send data through BLE UART service with maximum throughput. */
+void ble_nus_data_transfer(void)
+{ /*
+    uint32_t        err_code;
+
+    if (m_data_length == 0)    //< All data is sent.
+    {
+        m_file_in_transit = false;
+        err_code = ble_nus_send_string(&m_nus, (uint8_t *) "**END**", 7);     //< End indicator
+        APP_ERROR_CHECK(err_code);
+        return;
+    }
+
+    ** @note    Maximize BLE throughput
+      *          https://devzone.nordicsemi.com/question/1741/dealing-large-data-packets-through-ble/
+      *
+    for (;;)
+    {
+        err_code = ble_nus_send_string(&m_nus, m_data, m_data_length);
+
+        if (err_code == BLE_ERROR_NO_TX_BUFFERS ||
+            err_code == NRF_ERROR_INVALID_STATE ||
+            err_code == BLE_ERROR_GATTS_SYS_ATTR_MISSING)
+        {
+            break;
+        }
+        else if (err_code != NRF_SUCCESS)
+        {
+            APP_ERROR_CHECK(err_code);
+        }
+
+        back_data_ble_nus_fill(m_data, &m_data_length);
+    }
+*/
+
 }

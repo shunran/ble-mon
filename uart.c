@@ -35,7 +35,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
 
 /**@brief Initialize UART.
  */
-void initialize_uart(void)
+void uart_init(void)
 {
   int status = NRF_SUCCESS;
   const app_uart_comm_params_t uart_params = {

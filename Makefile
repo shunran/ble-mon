@@ -56,6 +56,8 @@ $(SDK_PATH)/components/drivers_nrf/clock/nrf_drv_clock.c \
 uart.c \
 timer.c \
 radio.c \
+contact.c \
+storage.c \
 main.c \
 $(SDK_PATH)/components/ble/common/ble_advdata.c \
 $(SDK_PATH)/components/ble/common/ble_conn_params.c \
@@ -240,6 +242,12 @@ flash: $(MAKECMDGOALS)
 flash_softdevice:
 	@echo Flashing: s130_nrf51_8.0.0_softdevice.hex
 	$(OPEN_OCD) -c "program $(SDK_PATH)/components/softdevice/s130/hex/s130_nrf51_1.0.0_softdevice.hex verify reset exit"
+
+## Flash softdevice
+reset:
+	@echo Resetting device
+	$(OPEN_OCD) -c "init;reset run;exit"
+
 
 ## Start OpenOCD daemon for manual commands via telnet
 openocd: 

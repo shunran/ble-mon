@@ -7,7 +7,10 @@
 #ifndef CONTACT_H_
 #define CONTACT_H_
 
-#define NUMBER_OF_CONTACTS			5
+#define NUMBER_OF_DEVICES		5 // Number of existing devices.
+#define CONTACT_CLOSE_INTERVAL 2 // Not present interval to close contact. In units of 2.007843 seconds.
+
+#include <inttypes.h>
 
 typedef struct
 {
@@ -18,5 +21,12 @@ typedef struct
     uint8_t                    address;        /**< Address of detected party. */
 } contact;
 
-contact contacts[NUMBER_OF_CONTACTS];
+extern contact contacts[NUMBER_OF_DEVICES];
+
+void make_contact(uint8_t);
+void contacts_init(void);
+void close_contacts(void);
+void clear_contacts();
+contact get_contact(uint8_t);
+
 #endif /* CONTACT_H_ */

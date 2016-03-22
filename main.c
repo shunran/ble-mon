@@ -28,8 +28,6 @@
 
 #include "boards.h"
 //#include "device_manager.h"
-#include "pstorage.h"
-#include "pstorage_platform.h"
 //#include "app_trace.h"
 //#include "bsp.h"
 //#include "bsp_btn_ble.h"
@@ -38,6 +36,7 @@
 #include "timer.h"
 #include "contact.h"
 #include "radio.h"
+#include "storage.h"
 
 #define DEVICE_NAME                      "sensor"                               /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME                "NordicSemiconductor"                      /**< Manufacturer. Will be passed to Device Information Service. */
@@ -58,14 +57,6 @@
 #define TIMESLOT_DISTANCE_US		20000
 
 
-//#define PSTORAGE_MIN_BLOCK_SIZE     4
-
-
-
-// YOUR_JOB: Use UUIDs for service(s) used in your application.
-//static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}}; /**< Universally unique service identifiers. */
-
-                                   
 /**@brief Callback function for asserts in the SoftDevice.
  *
  * @details This function will be called in case of an assert in the SoftDevice.
@@ -81,63 +72,6 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 {
     app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
-
-
-
-/**@brief Function for handling the YYY Service events. 
- * YOUR_JOB implement a service handler function depending on the event the service you are using can generate
- *
- * @details This function will be called for all YY Service events which are passed to
- *          the application.
- *
- * @param[in]   p_yy_service   YY Service structure.
- * @param[in]   p_evt          Event received from the YY Service.
- *
- *
-static void on_yys_evt(ble_yy_service_t     * p_yy_service, 
-                       ble_yy_service_evt_t * p_evt)
-{
-    switch (p_evt->evt_type)
-    {
-        case BLE_YY_NAME_EVT_WRITE:
-            APPL_LOG("[APPL]: charact written with value %s. \r\n", p_evt->params.char_xx.value.p_str);
-            break;
-        
-        default:
-            // No implementation needed.
-            break;
-    }
-}*/
-
-/**@brief Function for initializing services that will be used by the application.
- */
-/*static void services_init(void)
-{
-    / YOUR_JOB: Add code to initialize the services used by the application.
-    uint32_t                           err_code;
-    ble_xxs_init_t                     xxs_init;
-    ble_yys_init_t                     yys_init;
-
-    // Initialize XXX Service.
-    memset(&xxs_init, 0, sizeof(xxs_init));
-
-    xxs_init.evt_handler                = NULL;
-    xxs_init.is_xxx_notify_supported    = true;
-    xxs_init.ble_xx_initial_value.level = 100; 
-    
-    err_code = ble_bas_init(&m_xxs, &xxs_init);
-    APP_ERROR_CHECK(err_code);
-
-    // Initialize YYY Service.
-    memset(&yys_init, 0, sizeof(yys_init));
-    yys_init.evt_handler                  = on_yys_evt;
-    yys_init.ble_yy_initial_value.counter = 0;
-
-    err_code = ble_yy_service_init(&yys_init, &yy_init);
-    APP_ERROR_CHECK(err_code);
-    /
-}*/
-
 
 
 /**@brief Function for putting the chip into sleep mode.
@@ -190,6 +124,7 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
     }
 }*/
 
+/*
 static pstorage_handle_t m_p_storage_id;
 
 static void storage_init()
@@ -209,7 +144,7 @@ static void storage_init()
     //130 too much, 128 ok. = 2k bytes
     err_code = pstorage_register (&p_storage_param, &m_p_storage_id);
     APP_ERROR_CHECK(err_code);
-}
+}*/
 
 /**@brief Function for initializing buttons and leds.
  *
@@ -331,7 +266,7 @@ int main(void)
 	//uint32_t err_code;
 	//nrf_report_t report;
 	//btle_status_codes_t btle_err_code;
-	initialize_uart();
+	uart_init();
    	__LOG("UART initialized");
 	buttons_leds_init();
    	__LOG("LEDS GPIO initialized");
@@ -350,6 +285,9 @@ int main(void)
     conn_params_init();
     __LOG("Connection params set");
    	storage_init();
+
+   	contacts_init();
+   	__LOG("Contacts initialized");
 
     // Start execution.
     timers_start();

@@ -9,7 +9,7 @@
 #define UART_H_
 #define USE_UART_LOG
 
-/**@brief Macro defined to output log data on the UART or not, based on the USE_UART_LOGGING flag.
+/**@brief Macro defined to output log data on the UART or not, based on the USE_UART_LOG flag.
  * If logging is disabled, it will just yield a NOP instruction.
  */
 #ifdef USE_UART_LOG
@@ -24,7 +24,7 @@
  */
 void test_logf(const char *fmt, ...);
 
-void initialize_uart(void);
+void uart_init(void);
 
 void simple_uart_putstring(const uint8_t * str);
 #endif
