@@ -5,10 +5,11 @@
 // TODO: implement advertiser. OK.
 // TODO: implement observer. OK.
 // TODO: implement time. OK.
-// TODO: implement storage
-// TODO: implement connection and data download
-// TODO: add rssi field to advertiser if needed
+// TODO: implement storage. OK.
+// TODO: implement connection and data download. OK
+// TODO: add rssi field to advertiser if needed. No need.
 // TODO: whitelist in scanning and advertising only others and admin phone.
+// TODO: implement gpio
 
 //#include <stdint.h>
 #include <inttypes.h>

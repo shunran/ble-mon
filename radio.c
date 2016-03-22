@@ -249,21 +249,26 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
             // TODO: no bsp, rewrite
             //bsp_indication_set(BSP_INDICATE_CONNECTED);
             sd_ble_gap_scan_stop();
-            __LOG("scan stopped");
+            __LOG("conn. scan stopped");
             APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+            sd_ble_gap_tx_power_set(0);
             //scan_stop(); ????
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
             scan_start();
-            __LOG("scan start");
+            __LOG("disco. scan start");
+            // TODO: does not work, power set should be perhaps be in scan start.
+            //sd_ble_gap_tx_power_set(APP_GAP_TX_POWER);
             break;
 
         case BLE_GAP_EVT_TIMEOUT:
+            // intriduces problems.
+        	//sd_ble_gap_tx_power_set(APP_GAP_TX_POWER);
         	scan_start();
-        	__LOG("scan start");
+        	__LOG("timeout. scan start");
         	break;
 
         case BLE_GATTS_EVT_TIMEOUT:
@@ -273,6 +278,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
                                                  BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
                 APP_ERROR_CHECK(err_code);
             }
+        	__LOG("GATTS timeout. tee midagi selle kohaga.");
             break;
         default:
             // No implementation needed.
@@ -282,13 +288,11 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
 
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 {
-    // Not used as we dont have bsp
 	//uint32_t err_code;
-
+    //TODO: NO bsp, rewrite for ble400 board
     switch (ble_adv_evt)
     {
         case BLE_ADV_EVT_SLOW: // 4
-            // NO bsp, TODO: rewrite for ble400 board
            //err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
             //APP_ERROR_CHECK(err_code);
             break;
@@ -386,50 +390,33 @@ void advertising_start(void)
 static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t length)
 {
 	uint32_t        err_code;
-	//static uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
-    /*for (uint32_t i = 0; i < length; i++)
-    {
-        while(app_uart_put(p_data[i]) != NRF_SUCCESS);
-    }
-    while(app_uart_put('\n') != NRF_SUCCESS);*/
-
-    if (*p_data == 'm' && length == 1) {
-    	uint8_t * p_string = (uint8_t *) "HOUSTON, Im HERE\n";
-    	uint16_t len = 17;
-    	ble_nus_string_send(p_nus, p_string, len);
-    }
-
-    if (*p_data == 'r' &&  length == 1) {
-    	ble_nus_string_send(p_nus, (uint8_t *) "***DATA TRANSFER***\n", 20);
-    	//uint8_t data_array[BLE_NUS_MAX_DATA_LEN];
-    	//send_contact_to_nus();
-    	//ble_nus_string_send(p_nus, (uint8_t *) "Address: ", 8);
-    	//uint8_t dat[3] = {0xc0, 0xff, 0xee};
-    	//dat[0] = 0xc0;
-    	//dat[1] = 0xff;
-    	//dat[2] = 0xee;
-    	//* dat = (uint8_t *) 0xc0;
-
-    	//dat++;
-    	//* dat = (uint8_t *) 0xff;
-    	//dat++;
-    	//* dat = (uint8_t *) 0xee;
-    	//dat = dat -3;
-    	//__LOG("%s", p_dat);
-    	//sprintf((char *) dat, "%s", &c->address);
-    	//sprintf()
-    	uint8_t * p_dat = malloc(sizeof(uint8_t) * 4);
-    	err_code = read_contact_store(p_dat);
-    	APP_ERROR_CHECK(err_code);
-    	ble_nus_string_send(p_nus, p_dat, 4);
-    	//ble_nus_string_send(p_nus, (uint8_t *) "Last: ", 5);
-    	//ble_nus_string_send(p_nus, &c->last_time_seen, sizeof(c->last_time_seen));
-    	/* */
-    	//uint8_t * p_string = (uint8_t *) "HOUSTON, Im HERE\n";
-    	//uint16_t len = 17;
-    	//ble_nus_string_send(p_nus, p_string, len);
-    }
-    /* */
+	 if (length==1) //< Control Command
+	    {
+	        switch(p_data[0])
+	        {
+            case 'm':
+            	ble_nus_string_send(p_nus, (uint8_t *) "HOUSTON, Im HERE\n", 17);
+                break;
+            case 'l':
+            	storage_toggle_lock();
+            	ble_nus_string_send(p_nus, (uint8_t *) "Toggle storage lock\n", 20);
+            	break;
+            case 'r':
+            	ble_nus_string_send(p_nus, (uint8_t *) "***DATA TRANSFER***\n", 20);
+            	uint8_t * p_dat = malloc(sizeof(uint8_t) * BLE_NUS_MAX_DATA_LEN);
+            	uint8_t read_more = 1;
+            	do {
+            		read_more = read_contact_store(p_dat, BLE_NUS_MAX_DATA_LEN);
+                	err_code = ble_nus_string_send(p_nus, p_dat, 4);
+                	APP_ERROR_CHECK(err_code);
+                    memset(p_dat, 0, sizeof(p_dat));
+            	} while (read_more == 1);
+            	ble_nus_string_send(p_nus, (uint8_t *) "***DATA END***\n", 15);
+            	APP_ERROR_CHECK(err_code);
+            	free (p_dat);
+            	break;
+	        }
+	    }
 	__LOG("NUSCON:%s", p_data);
 }
 /**@snippet [Handling the data received over BLE] */
