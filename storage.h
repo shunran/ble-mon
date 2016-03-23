@@ -12,8 +12,9 @@
 void read_contacts();
 void storage_init();
 uint32_t store_contact(contact);
-uint8_t read_contact_store(uint8_t *, uint8_t); // 1 - wait for more, 0 - that's all folks
-void storage_toggle_lock();
+void read_contact_store(uint8_t *, uint8_t *);
+bool storage_toggle_lock(); // returns status after operation
 void storage_clear(void);
+void store_read_init(void);
 
 #endif /* STORAGE_H_ */

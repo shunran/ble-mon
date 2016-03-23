@@ -24,6 +24,7 @@
 #include "app_timer.h"
 #include "pstorage.h"
 #include "app_uart.h"
+#include "nrf_delay.h"
 
 #include "uart.h"
 #include "timer.h"
@@ -56,10 +57,24 @@ static uint16_t	m_conn_handle = BLE_CONN_HANDLE_INVALID;	/**< Handle of the curr
 
 static ble_uuid_t	m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};	/**< Universally unique service identifier. */
 
+static volatile bool	m_file_in_transit = false;
+static uint8_t * m_nus_data;
+static uint8_t m_data_length;
+
+
 //48bit addresses of whitelist
 //static int32_t known_devices[NUMBER_OF_DEVICES] = {0xC0FFEE0000, 0xC0FFEE0001};
 //static ble_gap_adv_params_t m_adv_params;
 
+//inline function declarations
+static void ble_nus_data_transfer(void);
+static void sys_evt_dispatch(uint32_t);
+static void ble_evt_dispatch(ble_evt_t*);
+static void on_ble_evt(ble_evt_t*);
+static void on_adv_evt(ble_adv_evt_t);
+static void nus_data_handler(ble_nus_t*, uint8_t*, uint16_t);
+static void on_conn_params_evt(ble_conn_params_evt_t*);
+static void conn_params_error_handler(uint32_t);
 /**
  * @brief Scan parameters requested for scanning and connection. */
 static const ble_gap_scan_params_t m_scan_param =
@@ -252,7 +267,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
             __LOG("conn. scan stopped");
             APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-            sd_ble_gap_tx_power_set(0);
+            //sd_ble_gap_tx_power_set(0);
             //scan_stop(); ????
             break;
 
@@ -279,6 +294,9 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
                 APP_ERROR_CHECK(err_code);
             }
         	__LOG("GATTS timeout. tee midagi selle kohaga.");
+            break;
+        case BLE_EVT_TX_COMPLETE:
+            if (m_file_in_transit) ble_nus_data_transfer();
             break;
         default:
             // No implementation needed.
@@ -395,31 +413,30 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t lengt
 	        switch(p_data[0])
 	        {
             case 'm':
-            	ble_nus_string_send(p_nus, (uint8_t *) "HOUSTON, Im HERE\n", 17);
+            	err_code = ble_nus_string_send(p_nus, (uint8_t *) "HOUSTON, Im HERE", 16);
                 break;
+            case 'c':
+            	;
+            	storage_clear();
+            	err_code = ble_nus_string_send(p_nus, (uint8_t *) "Storage cleared.", 16);
+            	break;
             case 'l':
-            	storage_toggle_lock();
-            	ble_nus_string_send(p_nus, (uint8_t *) "Toggle storage lock\n", 20);
+            	;
+            	char str_l[17];
+            	sprintf(str_l, "Toggled lock to %d", storage_toggle_lock());
+            	ble_nus_string_send(p_nus, (uint8_t *) str_l, 18);
             	break;
             case 'r':
-            	ble_nus_string_send(p_nus, (uint8_t *) "***DATA TRANSFER***\n", 20);
-            	uint8_t * p_dat = malloc(sizeof(uint8_t) * BLE_NUS_MAX_DATA_LEN);
-            	uint8_t read_more = 1;
-            	do {
-            		read_more = read_contact_store(p_dat, BLE_NUS_MAX_DATA_LEN);
-                	err_code = ble_nus_string_send(p_nus, p_dat, 4);
-                	APP_ERROR_CHECK(err_code);
-                    memset(p_dat, 0, sizeof(p_dat));
-            	} while (read_more == 1);
-            	ble_nus_string_send(p_nus, (uint8_t *) "***DATA END***\n", 15);
+            	err_code = ble_nus_string_send(p_nus, (uint8_t *) "***DATA TRANSFER***", 19);
             	APP_ERROR_CHECK(err_code);
-            	free (p_dat);
+            	store_read_init();
+            	read_contact_store(m_nus_data, &m_data_length);
+            	m_file_in_transit = true;
             	break;
 	        }
 	    }
 	__LOG("NUSCON:%s", p_data);
 }
-/**@snippet [Handling the data received over BLE] */
 
 
 /**@brief Function for initializing services that will be used by the application.
@@ -435,6 +452,8 @@ void services_init(void)
 
     err_code = ble_nus_init(&m_nus, &nus_init);
     APP_ERROR_CHECK(err_code);
+
+    m_nus_data = malloc(sizeof(uint8_t) * BLE_NUS_MAX_DATA_LEN);
 }
 
 /**@brief Function for handling the Connection Parameters Module.
@@ -491,24 +510,24 @@ void conn_params_init(void)
 
 
 /**@brief Send data through BLE UART service with maximum throughput. */
-void ble_nus_data_transfer(void)
-{ /*
+static void ble_nus_data_transfer()
+{
     uint32_t        err_code;
 
     if (m_data_length == 0)    //< All data is sent.
     {
         m_file_in_transit = false;
-        err_code = ble_nus_send_string(&m_nus, (uint8_t *) "**END**", 7);     //< End indicator
+        err_code = ble_nus_string_send(&m_nus, (uint8_t *) "**END**", 7);     //< End indicator
         APP_ERROR_CHECK(err_code);
         return;
     }
 
-    ** @note    Maximize BLE throughput
+    /** @note    Maximize BLE throughput
       *          https://devzone.nordicsemi.com/question/1741/dealing-large-data-packets-through-ble/
-      *
-    for (;;)
+      */
+    while (1)
     {
-        err_code = ble_nus_send_string(&m_nus, m_data, m_data_length);
+        err_code = ble_nus_string_send(&m_nus, m_nus_data, m_data_length);
 
         if (err_code == BLE_ERROR_NO_TX_BUFFERS ||
             err_code == NRF_ERROR_INVALID_STATE ||
@@ -520,9 +539,7 @@ void ble_nus_data_transfer(void)
         {
             APP_ERROR_CHECK(err_code);
         }
-
-        back_data_ble_nus_fill(m_data, &m_data_length);
+        read_contact_store(m_nus_data, &m_data_length);
+        //back_data_ble_nus_fill(m_data, &m_data_length);
     }
-*/
-
 }
