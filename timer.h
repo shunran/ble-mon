@@ -13,9 +13,10 @@
 
 extern uint8_t timer_epoch;
 
-void timers_init(void);
-void timeout_handler(void * p_context);
-void timers_start(void);
+void (*timer_event_indication)(void); /** this is executed by timer event handler if its not null and can contain any void func(void) */
+void timers_init(void); /** initialization of timer module */
+void timeout_handler(void * p_context); /** timer event handler */
+void timers_start(void); /** start the timers */
 
 
 

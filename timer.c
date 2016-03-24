@@ -16,7 +16,6 @@
 #include "app_timer.h"
 
 #include "timer.h"
-
 #include "contact.h"
 
 APP_TIMER_DEF(m_app_timer_id);
@@ -47,14 +46,15 @@ void timeout_handler(void * p_context)
 	//contact_get_current_time();
 	//init_contacts();
 	close_contacts();
+	if (timer_event_indication) {
+		(*timer_event_indication)();
+		//void * s = &timer_event_indication;
+		timer_event_indication = NULL;
+		//(*timer_event_indication)(void) = NULL;
+	}
+
 	last_time = this_time;
-    nrf_gpio_pin_set(LED_3);
-    nrf_delay_ms(20);
-    nrf_gpio_pin_clear(LED_3);
-    //__LOG("2 last seen at %d", get_contact(2).last_time_seen);
-    //__LOG("epoch %d and clock %u.", timer_epoch, this_time / 65793);
-    //__LOG("original %x.", this_time);
-	//const uint8_t leds_list[LEDS_NUMBER] = LEDS_LIST;
+
 
   //  UNUSED_PARAMETER(p_context);
   //stop the timer(s):

@@ -35,6 +35,7 @@
 #define LED_4_MASK    (1<<LED_4)
 
 #define LEDS_MASK      (LED_0_MASK | LED_1_MASK | LED_2_MASK | LED_3_MASK | LED_4_MASK)
+#define LEDS_INV_MASK  0
 
 #define BUTTONS_NUMBER 2
 #define LEDS_NUMBER    5

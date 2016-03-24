@@ -15,6 +15,7 @@
 #include "timer.h"
 #include "uart.h"
 #include "storage.h"
+#include "gpio.h"
 
 contact contacts[NUMBER_OF_DEVICES];
 
@@ -38,6 +39,7 @@ void make_contact(uint8_t address) {
 	uint8_t curr_ts;
 	curr_ts = calc_current_ts();
 	if (contacts[address].first_time_seen == 0) {
+		timer_event_indication = indicate_proximity;
 		contacts[address].first_time_seen = curr_ts;
 		contacts[address].first_epoch = timer_epoch;
 	}
@@ -56,6 +58,7 @@ void close_contacts() {
 				uint8_t epoch_diff = timer_epoch - contacts[i].last_epoch; // cannot be negative
 				uint16_t total_diff = UINT8_MAX * epoch_diff + counter_diff;
 				if (total_diff > CONTACT_CLOSE_INTERVAL) {
+					timer_event_indication = indicate_proximity_lost;
 					store_contact(contacts[i]);
 					clear_contact(contacts[i].address);
 					__LOG("lost contact.");

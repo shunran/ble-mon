@@ -12,6 +12,8 @@
 #ifndef BOARDS_H
 #define BOARDS_H
 
+//#define BOARD_BLE400 1
+
 #if defined(BOARD_RADIOLAND)
   #include "radioland.h"
 #elif defined(BOARD_BLE400)

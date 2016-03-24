@@ -58,6 +58,7 @@ timer.c \
 radio.c \
 contact.c \
 storage.c \
+gpio.c \
 main.c \
 $(SDK_PATH)/components/ble/common/ble_advdata.c \
 $(SDK_PATH)/components/ble/common/ble_conn_params.c \
@@ -114,7 +115,9 @@ OUTPUT_BINARY_DIRECTORY = $(OBJECT_DIRECTORY)
 BUILD_DIRECTORIES := $(sort $(OBJECT_DIRECTORY) $(OUTPUT_BINARY_DIRECTORY) $(LISTING_DIRECTORY) )
 
 #flags common to all targets
-CFLAGS  = -DBOARD_BLE400
+#CFLAGS  = -DBOARD_BLE400
+#CFLAGS  = -DBOARD_RADIOLAND
+CFLAGS  = -DUSE_UART_LOG
 CFLAGS += -DSOFTDEVICE_PRESENT
 CFLAGS += -DNRF51
 CFLAGS += -DS130
@@ -123,7 +126,7 @@ CFLAGS += -DSWI_DISABLE0
 # CFLAGS += -DENABLE_DEBUG_LOG_SUPPORT
 CFLAGS += -mcpu=cortex-m0
 CFLAGS += -mthumb -mabi=aapcs --std=gnu99
-# -Wall
+#CFLAGS += -Wall -Werror -O3
 CFLAGS += -Wall -Werror -O0 -g3
 CFLAGS += -mfloat-abi=soft
 # keep every function in separate section. This will allow linker to dump unused functions

@@ -7,7 +7,8 @@
  */
 #ifndef UART_H_
 #define UART_H_
-#define USE_UART_LOG
+
+//#define USE_UART_LOG is made in Makefile.
 
 /**@brief Macro defined to output log data on the UART or not, based on the USE_UART_LOG flag.
  * If logging is disabled, it will just yield a NOP instruction.

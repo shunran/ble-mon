@@ -28,8 +28,12 @@
 
 #include "uart.h"
 #include "timer.h"
+
+
 #include "contact.h"
 #include "storage.h"
+
+#define ADDRESS_OF_DEVICE	{0xC0, 0xFF, 0xEE, 0x00, 0x00, 0x4C}
 
 #define APP_GAP_TX_POWER	-30	/** Radio transmit power in dBm (accepted values are -40, -30, -20, -16, -12, -8, -4, 0, and 4 dBm). */
 #define MIN_CONN_INTERVAL	MSEC_TO_UNITS(20, UNIT_1_25_MS)	/**< Minimum acceptable connection interval (0.1 seconds). */
@@ -57,6 +61,7 @@ static uint16_t	m_conn_handle = BLE_CONN_HANDLE_INVALID;	/**< Handle of the curr
 
 static ble_uuid_t	m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}};	/**< Universally unique service identifier. */
 
+static const uint8_t l_device_address[] = ADDRESS_OF_DEVICE;
 static volatile bool	m_file_in_transit = false;
 static uint8_t * m_nus_data;
 static uint8_t m_data_length;
@@ -197,13 +202,10 @@ void gap_params_init(void)
     memset(&gap_address, 0, sizeof(gap_address));
     //TODO: BLE_GAP_ADDR_TYPE_RANDOM_PRIVATE_RESOLVABLE & IRK
     gap_address.addr_type = BLE_GAP_ADDR_TYPE_PUBLIC;
-    gap_address.addr[5] = 0xC0;
-    gap_address.addr[4] = 0xFF;
-    gap_address.addr[3] = 0xEE;
-    gap_address.addr[2] = 0x00;
-    gap_address.addr[1] = 0x00;
-    gap_address.addr[0] = 0x01;
-    	//	FFEE; // 48-bit address, LSB format
+    for (uint8_t i = 0; i < BLE_GAP_ADDR_LEN; i++) //Only last byte differs.
+    {
+    	gap_address.addr[BLE_GAP_ADDR_LEN - 1 - i] = l_device_address[i];
+    }
     //TODO: BLE_GAP_ADDR_CYCLE_MODE_AUTO
     err_code = sd_ble_gap_address_set(BLE_GAP_ADDR_CYCLE_MODE_NONE, &gap_address);
     APP_ERROR_CHECK(err_code);// Check for errors
@@ -233,30 +235,27 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
         case BLE_GAP_EVT_ADV_REPORT:
         {
             const ble_gap_evt_adv_report_t *p_adv_report = &p_gap_evt->params.adv_report;
-            /*
-             TODO:
-             implement whitelist
-             for (uint8_t i = 0; i < NUMBER_OF_DEVICES; i++) {
-            		//DO NOTHING
-            	if p_adv_report->peer_addr.addr =
-            }*/
-            // Last number of address matters
-            if (p_adv_report->peer_addr.addr[0] == 2) {
-            	make_contact(p_adv_report->peer_addr.addr[0]);
-            	__LOG("Found No.2");
+             //TODO: implement whitelist
+            bool friend = true;
+            // Whitelist substitute
+            for (int i = 0; i < BLE_GAP_ADDR_LEN - 1; i++)
+            	// Last number of address doesnt count. Others should be same as ours.
+            {
+            	if (p_adv_report->peer_addr.addr[BLE_GAP_ADDR_LEN - 1 - i] != l_device_address[i])
+            	{
+            		friend = false;
+            		break;
+            	}
             }
-           //test_logf("Found target");
-		   //(unsigned int) NRF_RTC1->COUNTER,
-            /*
-           __LOG("Target %02x%02x%02x%02x%02x%02x %ddBm",
-                     p_adv_report->peer_addr.addr[5],
-                     p_adv_report->peer_addr.addr[4],
-                     p_adv_report->peer_addr.addr[3],
-                     p_adv_report->peer_addr.addr[2],
-                     p_adv_report->peer_addr.addr[1],
-                     p_adv_report->peer_addr.addr[0],
-					 p_adv_report->rssi
-                     );*/
+
+            if (friend)
+            {
+                make_contact(p_adv_report->peer_addr.addr[0], p_adv_report->rssi);
+                __LOG("Target %02x %ddBm",
+                           p_adv_report->peer_addr.addr[0],
+      					 p_adv_report->rssi
+                           );
+            }
            break;
         }
         case BLE_GAP_EVT_CONNECTED:
@@ -432,6 +431,16 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t lengt
             	store_read_init();
             	read_contact_store(m_nus_data, &m_data_length);
             	m_file_in_transit = true;
+            	break;
+            case 't':
+            	;
+            	char str_t[20];
+            	uint8_t c;
+            	uint32_t ts = NRF_RTC1->COUNTER;
+            	c = sprintf(str_t, "ts:%lu epoch:%d", ts, timer_epoch);
+            	err_code = ble_nus_string_send(p_nus, (uint8_t *) str_t, c);
+            	 APP_ERROR_CHECK(err_code);
+            	APP_ERROR_CHECK(err_code);
             	break;
 	        }
 	    }
