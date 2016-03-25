@@ -14,9 +14,9 @@
 
 //#define BOARD_BLE400 1
 
-#if defined(BOARD_RADIOLAND)
+#ifdef BOARD_RADIOLAND
   #include "radioland.h"
-#elif defined(BOARD_BLE400)
+#elif defined ( BOARD_BLE400 )
   #include "ble400.h"
 #else
 #error "Board is not defined"

@@ -77,6 +77,7 @@ $(SDK_PATH)/components/ble/ble_advertising/ble_advertising.c
 
 #assembly files common to all targets
 ASM_SOURCE_FILES  = $(abspath $(SDK_PATH)/components/toolchain/gcc/gcc_startup_nrf51.s)
+#ASM_SOURCE_FILES  = $(abspath link/startup_nrf51.s)
 
 #includes common to all targets
 INC_PATHS  = -Iconfig
@@ -115,15 +116,14 @@ OUTPUT_BINARY_DIRECTORY = $(OBJECT_DIRECTORY)
 BUILD_DIRECTORIES := $(sort $(OBJECT_DIRECTORY) $(OUTPUT_BINARY_DIRECTORY) $(LISTING_DIRECTORY) )
 
 #flags common to all targets
-#CFLAGS  = -DBOARD_BLE400
+CFLAGS  = -DBOARD_BLE400
 #CFLAGS  = -DBOARD_RADIOLAND
-CFLAGS  = -DUSE_UART_LOG
+CFLAGS += -DUSE_UART_LOG
 CFLAGS += -DSOFTDEVICE_PRESENT
 CFLAGS += -DNRF51
 CFLAGS += -DS130
 CFLAGS += -DBLE_STACK_SUPPORT_REQD
 CFLAGS += -DSWI_DISABLE0
-# CFLAGS += -DENABLE_DEBUG_LOG_SUPPORT
 CFLAGS += -mcpu=cortex-m0
 CFLAGS += -mthumb -mabi=aapcs --std=gnu99
 #CFLAGS += -Wall -Werror -O3
@@ -150,6 +150,10 @@ ASMFLAGS += -DNRF51
 ASMFLAGS += -DS130
 ASMFLAGS += -DBLE_STACK_SUPPORT_REQD
 ASMFLAGS += -DSWI_DISABLE0
+#ASMFLAGS += -D__HEAP_SIZE=0x399
+#ASMFLAGS +=-D__HEAP_SIZE=0x399
+#ASMFLAGS += -D__STACK_SIZE=0xC00
+# original 0x800
 #default target - first one defined
 default: clean ble-mon
 

@@ -250,7 +250,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
 
             if (friend)
             {
-                make_contact(p_adv_report->peer_addr.addr[0], p_adv_report->rssi);
+                make_contact(p_adv_report->peer_addr.addr[0]);
                 __LOG("Target %02x %ddBm",
                            p_adv_report->peer_addr.addr[0],
       					 p_adv_report->rssi
