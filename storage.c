@@ -31,9 +31,9 @@ static uint8_t * write_cache; //[STORE_BLOCK_SIZE]; // 40 bytes
 static uint8_t * read_cache; //[STORE_BLOCK_SIZE]; // 40 bytes
 
 static uint8_t w_cache_curr_idx = 0;
-static uint8_t w_blix = 0;
+static uint16_t w_blix = 0;
 
-static uint8_t r_cache_curr_idx = STORE_BLOCK_SIZE - 1; // index for copying to nus.
+static uint8_t r_cache_curr_idx = STORE_BLOCK_SIZE; // index for copying to nus.
 static uint16_t r_blix = 0; // begin reading from first block;
 
 static bool operation_lock = false; /** operation in progress and storage cannot be accessed. */
@@ -57,7 +57,7 @@ static void storage_callback(pstorage_handle_t  * handle,
 	       case PSTORAGE_LOAD_OP_CODE:
 	           if (result == NRF_SUCCESS)
 	           {
-	        	   operation_lock = false;
+
 	               //Store load operation successful.
 	        	   //Not good to debug log here,
 	        	   //NUS has tight timing.
@@ -68,6 +68,10 @@ static void storage_callback(pstorage_handle_t  * handle,
 	        	   // APP_ERROR_CHECK(result);
 	               // Store operation failed.
 	           }
+	            //memset(read_cache, 0, sizeof(uint8_t) * STORE_BLOCK_SIZE);
+				r_blix++;
+				r_cache_curr_idx = 0;
+				operation_lock = false;
 	           break;
 	       case PSTORAGE_STORE_OP_CODE:
 	           if (result == NRF_SUCCESS)
@@ -80,9 +84,8 @@ static void storage_callback(pstorage_handle_t  * handle,
 	               // Store operation failed.
 	        	    APP_ERROR_CHECK(result);
 	           }
-        	   memset(write_cache, 0, sizeof(uint8_t) * STORE_BLOCK_SIZE);
-        	   w_cache_curr_idx = 0;
-        	   if (w_blix < STORE_BLOCK_COUNT - 1)
+
+        	   if (w_blix + 1 < STORE_BLOCK_COUNT)
         	   {
         		   w_blix++;
         	   }
@@ -91,6 +94,8 @@ static void storage_callback(pstorage_handle_t  * handle,
         		   storage_full = true;
         		   timer_event_indication = indicate_storage_problem;
         	   }
+        	   memset(write_cache, 0, sizeof(uint8_t) * STORE_BLOCK_SIZE);
+        	   w_cache_curr_idx = 0;
         	   operation_lock = false;
 	           break;
 	       case PSTORAGE_CLEAR_OP_CODE:
@@ -142,7 +147,7 @@ void storage_init()
 
     write_cache = malloc(sizeof(uint8_t) * STORE_BLOCK_SIZE); // 40 bytes
     read_cache = malloc(sizeof(uint8_t) * STORE_BLOCK_SIZE); // 40 bytes
-    memset(read_cache, 0, sizeof(uint8_t) * STORE_BLOCK_SIZE);
+    memset(write_cache, 0, sizeof(uint8_t) * STORE_BLOCK_SIZE);
     memset(read_cache, 0, sizeof(uint8_t) * STORE_BLOCK_SIZE);
     //memset()
 }
@@ -184,9 +189,8 @@ uint32_t store_report(uint8_t ts, uint8_t epoch, int8_t rssi, uint8_t addr) {
 	write_cache[w_cache_curr_idx++] = epoch;
 	write_cache[w_cache_curr_idx++] = rssi;
 	write_cache[w_cache_curr_idx++] = addr;
-	if (w_cache_curr_idx == STORE_BLOCK_SIZE) {
-		if (!operation_lock && !manual_lock)
-			err_code = initiate_write();
+	if (w_cache_curr_idx >= STORE_BLOCK_SIZE) {
+		err_code = initiate_write();
 	};
 	//__LOG("Write cache idx %d", write_cache_curr_idx);
 	/*while (storage_locked) { // seems to lock, doesnt work.
@@ -259,7 +263,7 @@ static void fill_data(uint8_t * nus_storage, uint8_t * nus_length )
 
     while(*nus_length < BLE_NUS_MAX_DATA_LEN )	//nus string has room.
     {
-    	if (r_cache_curr_idx < STORE_BLOCK_SIZE - 1)	//there is data
+    	if (r_cache_curr_idx < STORE_BLOCK_SIZE)	//there is data
     	{
     		nus_storage[*nus_length] = read_cache[r_cache_curr_idx];
     		r_cache_curr_idx++;
@@ -274,11 +278,10 @@ static void fill_data(uint8_t * nus_storage, uint8_t * nus_length )
     	        operation_lock = true;
     	    	err_code = pstorage_load(read_cache, &block_handle, STORE_BLOCK_SIZE, 0);
     	        APP_ERROR_CHECK(err_code);
-    	        r_blix++;
-    	        r_cache_curr_idx = 0;
     		} else {
     			//loaded all blocks
     			//blix = 0;
+    			//__LOG("%x", write_cache[39]);
     			break; //nothing more to send
     		}
     	}
