@@ -23,7 +23,7 @@
 //#undef PSTORAGE_MIN_BLOCK_SIZE
 //#define PSTORAGE_MIN_BLOCK_SIZE     4 // library min is 16
 #define STORE_BLOCK_SIZE	40
-#define STORE_BLOCK_COUNT	50
+#define STORE_BLOCK_COUNT	50 // 20 was ok
 
 static pstorage_handle_t m_p_storage_id;
 
@@ -85,13 +85,13 @@ static void storage_callback(pstorage_handle_t  * handle,
         	   if (w_blix < STORE_BLOCK_COUNT - 1)
         	   {
         		   w_blix++;
-            	   operation_lock = false;
         	   }
         	   else
         	   {
         		   storage_full = true;
-        		   timer_event_indication = indicate_storage_full;
+        		   timer_event_indication = indicate_storage_problem;
         	   }
+        	   operation_lock = false;
 	           break;
 	       case PSTORAGE_CLEAR_OP_CODE:
 	           if (result == NRF_SUCCESS)
@@ -104,7 +104,10 @@ static void storage_callback(pstorage_handle_t  * handle,
 	               // Store operation failed.
 	        	    APP_ERROR_CHECK(result);
 	           }
-               w_blix =0;
+	           memset(write_cache, 0, sizeof(uint8_t) * STORE_BLOCK_SIZE);
+	           w_cache_curr_idx = 0;
+	           w_blix = 0;
+	           storage_full = false;
                operation_lock = false;
 	           break;
 	       case PSTORAGE_UPDATE_OP_CODE:
@@ -144,47 +147,36 @@ void storage_init()
     //memset()
 }
 
-uint32_t store_contact(contact row) {
-	uint32_t err_code = NRF_SUCCESS;
-
-	if (operation_lock || manual_lock) {
-		//TODO: check it from contact side and dont clear the contact.
-		//Write or read in progress, dont do anything.
-		__LOG("write was busy");
-		err_code = NRF_ERROR_BUSY;
-		return err_code;
-	}
-	write_cache[w_cache_curr_idx++] = row.address;
-	write_cache[w_cache_curr_idx++] = row.first_epoch;
-	write_cache[w_cache_curr_idx++] = row.first_time_seen;
-	write_cache[w_cache_curr_idx++] = row.last_epoch;
-	write_cache[w_cache_curr_idx++] = row.last_time_seen;
-	if (w_cache_curr_idx == STORE_BLOCK_SIZE) {
-		if (!operation_lock && !manual_lock)
-			err_code = initiate_write();
-	};
-	//__LOG("Write cache is %d", write_cache_curr_idx);
-	/*while (storage_locked) { // seems to lock, doesnt work.
-		err_code = sd_app_evt_wait();
-		APP_ERROR_CHECK(err_code);
-	}*/
-	return err_code;
-}
+//uint32_t store_contact(contact row) {
+//	uint32_t err_code = NRF_SUCCESS;
+//
+//	if (operation_lock || manual_lock) {
+//		//TODO: check it from contact side and dont clear the contact.
+//		//Write or read in progress, dont do anything.
+//		__LOG("write was busy");
+//		err_code = NRF_ERROR_BUSY;
+//		return err_code;
+//	}
+//	write_cache[w_cache_curr_idx++] = row.address;
+//	write_cache[w_cache_curr_idx++] = row.first_epoch;
+//	write_cache[w_cache_curr_idx++] = row.first_time_seen;
+//	write_cache[w_cache_curr_idx++] = row.last_epoch;
+//	write_cache[w_cache_curr_idx++] = row.last_time_seen;
+//	if (w_cache_curr_idx == STORE_BLOCK_SIZE) {
+//		if (!operation_lock && !manual_lock)
+//			err_code = initiate_write();
+//	};
+//	return err_code;
+//}
 
 
 uint32_t store_report(uint8_t ts, uint8_t epoch, int8_t rssi, uint8_t addr) {
 	uint32_t err_code = NRF_SUCCESS;
-	if (storage_full)
-	{
-		__LOG("write was full");
-		timer_event_indication = indicate_storage_full;
-		return NRF_ERROR_BUSY;
-	}
-
-	if (operation_lock || manual_lock) {
+	if (operation_lock || manual_lock || storage_full) {
 		//TODO: check it from contact side and dont clear the contact.
 		//Write or read in progress, dont do anything.
-		__LOG("write was busy");
+		//__LOG("write was busy");
+		timer_event_indication = indicate_storage_problem;
 		err_code = NRF_ERROR_BUSY;
 		return err_code;
 	}
@@ -212,6 +204,7 @@ void read_store_data(uint8_t * p_row, uint8_t * size) {
 	if (operation_lock) {
 		//TODO: check it from reading side and dont clear the contact.
 		//Write or read in progress, dont do anything.
+		__LOG("Read locked.");
 		return;
 	}
 	fill_data(p_row, size);
@@ -278,7 +271,7 @@ static void fill_data(uint8_t * nus_storage, uint8_t * nus_length )
     	        err_code = pstorage_block_identifier_get(&m_p_storage_id, r_blix, &block_handle);
     			//__LOG("got block id %d with err %d", blix, err_code);
     	        APP_ERROR_CHECK(err_code);
-    	        //operation_lock = true;
+    	        operation_lock = true;
     	    	err_code = pstorage_load(read_cache, &block_handle, STORE_BLOCK_SIZE, 0);
     	        APP_ERROR_CHECK(err_code);
     	        r_blix++;
@@ -296,9 +289,7 @@ void storage_clear()
 {
 	operation_lock = true;
     pstorage_clear(&m_p_storage_id, STORE_BLOCK_SIZE * STORE_BLOCK_COUNT);
-    memset(write_cache, 0, sizeof(uint8_t) * STORE_BLOCK_SIZE);
-    w_cache_curr_idx = 0;
-    w_blix = 0;
+
 }
 
 bool storage_toggle_lock()

@@ -33,7 +33,7 @@
 #include "contact.h"
 #include "storage.h"
 
-#define ADDRESS_OF_DEVICE	{0xC0, 0xFF, 0xEE, 0x00, 0x00, 0x4C}
+#define ADDRESS_OF_DEVICE	{0xC0, 0xFF, 0xEE, 0x00, 0x00, 0x01}
 
 #define APP_GAP_TX_POWER	-4	/** Radio transmit power in dBm (accepted values are -40, -30, -20, -16, -12, -8, -4, 0, and 4 dBm). */
 #define MIN_CONN_INTERVAL	MSEC_TO_UNITS(20, UNIT_1_25_MS)	/**< Minimum acceptable connection interval (0.1 seconds). */
@@ -64,7 +64,7 @@ static ble_uuid_t	m_adv_uuids[] = {{BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE}
 static const uint8_t l_device_address[] = ADDRESS_OF_DEVICE;
 static volatile bool	m_file_in_transit = false;
 static uint8_t * m_nus_data;
-static uint8_t m_data_length;
+static uint8_t m_data_length = 0;
 
 
 //48bit addresses of whitelist

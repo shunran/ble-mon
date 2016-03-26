@@ -25,11 +25,9 @@ void gpio_init() {
  */
 void indicate_proximity() {
 	if (DISABLE_INDICATION) return;
+	LEDS_ON(LEDS_MASK);
+	nrf_delay_ms(DELAY_MS);
 	LEDS_OFF(LEDS_MASK);
-	for (int i = 0; i < 4; i++) {
-		LEDS_INVERT(LEDS_MASK);
-		nrf_delay_ms(DELAY_MS);
-	}
 }
 
 /**
@@ -38,9 +36,11 @@ void indicate_proximity() {
  */
 void indicate_proximity_lost() {
 	if (DISABLE_INDICATION) return;
-	LEDS_ON(LEDS_MASK);
-	nrf_delay_ms(DELAY_MS);
 	LEDS_OFF(LEDS_MASK);
+	for (int i = 0; i < 4; i++) {
+		LEDS_INVERT(LEDS_MASK);
+		nrf_delay_ms(DELAY_MS);
+	}
 }
 
 /**
@@ -71,16 +71,21 @@ void indicate_init() {
 	}
 }
 
+void indicate_storage_problem() {
+	if (DISABLE_INDICATION) return;
+	LEDS_OFF(LEDS_MASK);
+	for (int i = 0; i < 6; i++) {
+		LEDS_INVERT(LEDS_MASK);
+		nrf_delay_ms(DELAY_MS / 2);
+	}
+}
+
 void indicate_connection() {
 	//5 plinki
 }
 
 void indicate_connection_lost() {
 	//5 plinki ?
-}
-
-void indicate_storage_full() {
-	//10 plinki
 }
 
 void indicate_advertising() {
