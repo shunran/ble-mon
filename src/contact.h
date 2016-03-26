@@ -36,6 +36,6 @@ void contacts_init(void);
 void close_contacts(void);
 void clear_contacts();
 contact get_contact(uint8_t);
-void make_report(uint8_t, uint8_t, int8_t, uint8_t);
+void make_report(uint32_t, uint8_t, int8_t, uint8_t);
 
 #endif /* CONTACT_H_ */

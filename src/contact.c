@@ -102,14 +102,13 @@ static void clear_contact(uint8_t address)
 /**
  *
  */
-//static uint8_t calc_current_ts() {
-//	uint32_t curr_time = NRF_RTC1->COUNTER;
-//	uint8_t result = curr_time / divisor;
-//	return result;
-//}
+static uint8_t get_ts(uint32_t cnt) {
+	uint8_t result = cnt / divisor;
+	return result;
+}
 
 
-void make_report(uint8_t ts, uint8_t epoch, int8_t rssi, uint8_t addr) {
+void make_report(uint32_t counter, uint8_t epoch, int8_t rssi, uint8_t addr) {
 	//reports[reports_idx];
 	//adv_report rep;
 	//rep.addr = addr;
@@ -120,7 +119,7 @@ void make_report(uint8_t ts, uint8_t epoch, int8_t rssi, uint8_t addr) {
 	//(reports + reports_idx) = &s_rep;
 //	if (reports_idx == 10) {
 		timer_event_indication = indicate_proximity;
-		store_report(ts, epoch, rssi, addr);
+		store_report(get_ts(counter), epoch, rssi, addr);
 //	}
 //	uint8_t curr_ts;
 //	curr_ts = calc_current_ts();

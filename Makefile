@@ -3,11 +3,11 @@ PROJECT_NAME := ble-mon
 export OUTPUT_FILENAME
 #MAKEFILE_NAME := $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 MAKEFILE_NAME := $(MAKEFILE_LIST)
-MAKEFILE_DIR := $(dir $(MAKEFILE_NAME) ) 
+MAKEFILE_DIR := $(dir $(MAKEFILE_NAME) )
 
 SDK_PATH = C:/nRF51_SDK_10.0.0
 OPEN_OCD = C:/openocd-0.9.0/bin-x64/openocd -f interface/stlink-v2.cfg -f target/nrf51.cfg
-LINKER_SCRIPT=ble-mon_gcc_nrf51.ld
+LINKER_SCRIPT=link/ble-mon_gcc_nrf51.ld
 OUTPUT_FILENAME := $(PROJECT_NAME)
 
 TEMPLATE_PATH = $(SDK_PATH)/components/toolchain/gcc
@@ -53,13 +53,13 @@ $(SDK_PATH)/components/drivers_nrf/common/nrf_drv_common.c \
 $(SDK_PATH)/components/drivers_nrf/gpiote/nrf_drv_gpiote.c \
 $(SDK_PATH)/components/drivers_nrf/uart/nrf_drv_uart.c \
 $(SDK_PATH)/components/drivers_nrf/clock/nrf_drv_clock.c \
-uart.c \
-timer.c \
-radio.c \
-contact.c \
-storage.c \
-gpio.c \
-main.c \
+src/uart.c \
+src/timer.c \
+src/radio.c \
+src/contact.c \
+src/storage.c \
+src/gpio.c \
+src/main.c \
 $(SDK_PATH)/components/ble/common/ble_advdata.c \
 $(SDK_PATH)/components/ble/common/ble_conn_params.c \
 $(SDK_PATH)/components/ble/common/ble_srv_common.c \
@@ -80,9 +80,9 @@ ASM_SOURCE_FILES  = $(abspath $(SDK_PATH)/components/toolchain/gcc/gcc_startup_n
 #ASM_SOURCE_FILES  = $(abspath link/gcc_startup_nrf51.s)
 
 #includes common to all targets
-INC_PATHS  = -Iconfig
-# INC_PATHS += -Iobserver
-INC_PATHS += -Iboards
+INC_PATHS = -I$(MAKEFILE_DIR)/src/boards
+INC_PATHS += -I$(MAKEFILE_DIR)/src/config
+INC_PATHS += -I$(MAKEFILE_DIR)/src
 INC_PATHS += -I$(SDK_PATH)/components/libraries/util
 INC_PATHS += -I$(SDK_PATH)/components/drivers_nrf/pstorage
 INC_PATHS += -I$(SDK_PATH)/components/toolchain/gcc
