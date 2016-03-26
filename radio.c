@@ -35,7 +35,7 @@
 
 #define ADDRESS_OF_DEVICE	{0xC0, 0xFF, 0xEE, 0x00, 0x00, 0x4C}
 
-#define APP_GAP_TX_POWER	-30	/** Radio transmit power in dBm (accepted values are -40, -30, -20, -16, -12, -8, -4, 0, and 4 dBm). */
+#define APP_GAP_TX_POWER	-4	/** Radio transmit power in dBm (accepted values are -40, -30, -20, -16, -12, -8, -4, 0, and 4 dBm). */
 #define MIN_CONN_INTERVAL	MSEC_TO_UNITS(20, UNIT_1_25_MS)	/**< Minimum acceptable connection interval (0.1 seconds). */
 #define MAX_CONN_INTERVAL	MSEC_TO_UNITS(75, UNIT_1_25_MS)	/**< Maximum acceptable connection interval (0.2 second). */
 #define SLAVE_LATENCY	0	/**< Slave latency. */
@@ -250,11 +250,12 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
 
             if (friend)
             {
-                make_contact(p_adv_report->peer_addr.addr[0]);
-                __LOG("Target %02x %ddBm",
+                make_report(NRF_RTC1->COUNTER, timer_epoch, p_adv_report->rssi, p_adv_report->peer_addr.addr[0]);
+            	//make_contact(p_adv_report->peer_addr.addr[0]);
+                /*__LOG("Target %02x %ddBm",
                            p_adv_report->peer_addr.addr[0],
       					 p_adv_report->rssi
-                           );
+                           );*/
             }
            break;
         }
@@ -412,7 +413,6 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t lengt
 	        switch(p_data[0])
 	        {
             case 'm':
-            	err_code = ble_nus_string_send(p_nus, (uint8_t *) "HOUSTON, Im HERE", 16);
                 break;
             case 'c':
             	;
@@ -426,11 +426,13 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t lengt
             	ble_nus_string_send(p_nus, (uint8_t *) str_l, 18);
             	break;
             case 'r':
+            	store_read_init();
+            	read_store_data(m_nus_data, &m_data_length);
+            	nrf_delay_ms(MAX_CONN_INTERVAL * 2);
+            	m_file_in_transit = true;
             	err_code = ble_nus_string_send(p_nus, (uint8_t *) "***DATA TRANSFER***", 19);
             	APP_ERROR_CHECK(err_code);
-            	store_read_init();
-            	read_contact_store(m_nus_data, &m_data_length);
-            	m_file_in_transit = true;
+
             	break;
             case 't':
             	;
@@ -440,7 +442,6 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t lengt
             	c = sprintf(str_t, "ts:%lu epoch:%d", ts, timer_epoch);
             	err_code = ble_nus_string_send(p_nus, (uint8_t *) str_t, c);
             	 APP_ERROR_CHECK(err_code);
-            	APP_ERROR_CHECK(err_code);
             	break;
 	        }
 	    }
@@ -536,8 +537,9 @@ static void ble_nus_data_transfer()
       */
     while (1)
     {
+    	if (m_data_length == 0) break;
         err_code = ble_nus_string_send(&m_nus, m_nus_data, m_data_length);
-
+        //test_logf("First nus send with len %d and err %d", m_data_length, err_code);
         if (err_code == BLE_ERROR_NO_TX_BUFFERS ||
             err_code == NRF_ERROR_INVALID_STATE ||
             err_code == BLE_ERROR_GATTS_SYS_ATTR_MISSING)
@@ -548,7 +550,8 @@ static void ble_nus_data_transfer()
         {
             APP_ERROR_CHECK(err_code);
         }
-        read_contact_store(m_nus_data, &m_data_length);
+        //__LOG("Getting data with len: %d", m_data_length);
+        read_store_data(m_nus_data, &m_data_length);
         //back_data_ble_nus_fill(m_data, &m_data_length);
     }
 }

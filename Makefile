@@ -77,7 +77,7 @@ $(SDK_PATH)/components/ble/ble_advertising/ble_advertising.c
 
 #assembly files common to all targets
 ASM_SOURCE_FILES  = $(abspath $(SDK_PATH)/components/toolchain/gcc/gcc_startup_nrf51.s)
-#ASM_SOURCE_FILES  = $(abspath link/startup_nrf51.s)
+#ASM_SOURCE_FILES  = $(abspath link/gcc_startup_nrf51.s)
 
 #includes common to all targets
 INC_PATHS  = -Iconfig
@@ -144,15 +144,17 @@ LDFLAGS += --specs=nano.specs -lc -lnosys
 
 # Assembler flags
 ASMFLAGS += -x assembler-with-cpp
-ASMFLAGS += -DBOARD_BLE400
-ASMFLAGS += -DSOFTDEVICE_PRESENT
-ASMFLAGS += -DNRF51
-ASMFLAGS += -DS130
-ASMFLAGS += -DBLE_STACK_SUPPORT_REQD
-ASMFLAGS += -DSWI_DISABLE0
+#ASMFLAGS += -DBOARD_BLE400
+#ASMFLAGS += -DSOFTDEVICE_PRESENT
+#ASMFLAGS += -DNRF51
+#ASMFLAGS += -DS130
+#ASMFLAGS += -DBLE_STACK_SUPPORT_REQD
+#ASMFLAGS += -DSWI_DISABLE0
 #ASMFLAGS += -D__HEAP_SIZE=0x399
-#ASMFLAGS +=-D__HEAP_SIZE=0x399
-#ASMFLAGS += -D__STACK_SIZE=0xC00
+#ASMFLAGS = -Wa,--defsym,__STACK_SIZE=0xC00
+
+ASMFLAGS +=-D__STACK_SIZE=0xB00
+ASMFLAGS += -D__HEAP_SIZE=0x500
 # original 0x800
 #default target - first one defined
 default: clean ble-mon
@@ -197,10 +199,13 @@ $(OBJECT_DIRECTORY)/%.o: %.c
 	@echo Compiling file: $(notdir $<)
 	$(NO_ECHO)$(CC) $(CFLAGS) $(INC_PATHS) -c -o $@ $<
 
+
+#$(NO_ECHO)$(AS) $(ASMFLAGS) -c -o $@ $<
 # Assemble files
 $(OBJECT_DIRECTORY)/%.o: %.s
 	@echo Compiling file: $(notdir $<)
 	$(NO_ECHO)$(CC) $(ASMFLAGS) $(INC_PATHS) -c -o $@ $<
+
 
 
 # Link

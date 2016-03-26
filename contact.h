@@ -21,12 +21,21 @@ typedef struct
     uint8_t                    address;        /**< Address of detected party. */
 } contact;
 
-extern contact contacts[NUMBER_OF_DEVICES];
+typedef struct
+{
+    uint8_t                    ts; /** timestamp */
+    uint8_t                    epoch; /** epoch */
+    int8_t                    rssi; /**< Timer Epoch at contact start. */
+    uint8_t                    addr;   /**address of the device. */
+} adv_report;
+
+//extern contact contacts[NUMBER_OF_DEVICES];
 
 void make_contact(uint8_t);
 void contacts_init(void);
 void close_contacts(void);
 void clear_contacts();
 contact get_contact(uint8_t);
+void make_report(uint8_t, uint8_t, int8_t, uint8_t);
 
 #endif /* CONTACT_H_ */
