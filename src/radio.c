@@ -33,9 +33,9 @@
 #include "contact.h"
 #include "storage.h"
 
-#define ADDRESS_OF_DEVICE	{0xC0, 0xFF, 0xEE, 0x00, 0x00, 0x01}
+#define ADDRESS_OF_DEVICE	{0xC0, 0xFF, 0xEE, 0x00, 0x00, 0x03}
 
-#define APP_GAP_TX_POWER	-4	/** Radio transmit power in dBm (accepted values are -40, -30, -20, -16, -12, -8, -4, 0, and 4 dBm). */
+#define INITIAL_APP_GAP_TX_POWER	-20	/** Radio transmit power in dBm (accepted values are -40, -30, -20, -16, -12, -8, -4, 0, and 4 dBm). */
 #define MIN_CONN_INTERVAL	MSEC_TO_UNITS(20, UNIT_1_25_MS)	/**< Minimum acceptable connection interval (0.1 seconds). */
 #define MAX_CONN_INTERVAL	MSEC_TO_UNITS(75, UNIT_1_25_MS)	/**< Maximum acceptable connection interval (0.2 second). */
 #define SLAVE_LATENCY	0	/**< Slave latency. */
@@ -53,7 +53,7 @@
 
 #define FIRST_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000, APP_TIMER_PRESCALER) /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
 #define NEXT_CONN_PARAMS_UPDATE_DELAY    APP_TIMER_TICKS(30000, APP_TIMER_PRESCALER)/**< Time between each call to sd_ble_gap_conn_param_update after the first call (30 seconds). */
-#define MAX_CONN_PARAMS_UPDATE_COUNT     3                                          /**< Number of attempts before giving up the connection parameter negotiation. */
+#define MAX_CONN_PARAMS_UPDATE_COUNT     3      /**< Number of attempts before giving up the connection parameter negotiation. */
 
 
 static ble_nus_t	m_nus;	/**< Structure to identify the Nordic UART Service. */
@@ -65,6 +65,7 @@ static const uint8_t l_device_address[] = ADDRESS_OF_DEVICE;
 static volatile bool	m_file_in_transit = false;
 static uint8_t * m_nus_data;
 static uint8_t m_data_length = 0;
+static int8_t gap_tx_power = INITIAL_APP_GAP_TX_POWER;
 
 
 //48bit addresses of whitelist
@@ -178,7 +179,7 @@ void gap_params_init(void)
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
 
-    sd_ble_gap_tx_power_set(APP_GAP_TX_POWER);
+    sd_ble_gap_tx_power_set(gap_tx_power);
 
     /*
 
@@ -273,15 +274,15 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
 
         case BLE_GAP_EVT_DISCONNECTED:
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
-            scan_start();
             __LOG("disco. scan start");
-            // TODO: does not work, power set should be perhaps be in scan start.
-            //sd_ble_gap_tx_power_set(APP_GAP_TX_POWER);
+            scan_start();
+            //initialize advertising again in case power level changed.
+            advertising_init();
+            advertising_start();
             break;
 
         case BLE_GAP_EVT_TIMEOUT:
-            // intriduces problems.
-        	//sd_ble_gap_tx_power_set(APP_GAP_TX_POWER);
+        	//advertising starts itself.
         	scan_start();
         	__LOG("timeout. scan start");
         	break;
@@ -337,21 +338,13 @@ void advertising_init(void)
     advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
     advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
     advdata.uuids_complete.p_uuids  = m_adv_uuids;
-    //*BLE_GAP_ADV_TYPE_ADV_NONCONN_IND
+    advdata.p_tx_power_level        = &gap_tx_power;
+
     ble_adv_modes_config_t options = {0};
     options.ble_adv_slow_enabled  = BLE_ADV_SLOW_ENABLED;
     options.ble_adv_slow_interval = APP_ADV_INTERVAL;
     options.ble_adv_slow_timeout  = APP_ADV_TIMEOUT;
-    /* */
 
-    /*
-    bool     ble_adv_slow_enabled;            /< Enable or disable slow advertising mode. /
-    uint32_t ble_adv_slow_interval;           /< Advertising interval for slow advertising. /
-    uint32_t ble_adv_slow_timeout;            /< Time-out (in seconds) for slow advertising. *
-
-    */
-
-    //options.ble_ad
     //err_code = ble_advdata_set(&advdata, NULL, options, on_adv_event);
     err_code = ble_advertising_init(&advdata, NULL, &options, on_adv_evt, NULL);
     APP_ERROR_CHECK(err_code);
@@ -377,22 +370,8 @@ void advertising_start(void)
 {
     uint32_t err_code;
 
-    /*The sd_ble_gap_adv_start advertising procedure cannot however be connectable
-     * (it must be of type @ref BLE_GAP_ADV_TYPE_ADV_SCAN_IND or
-     *       @ref BLE_GAP_ADV_TYPE_ADV_NONCONN_IND).*/
-    //err_code = sd_ble_gap_adv_start(&m_adv_params);
-    //////////////////TODO:
     err_code = ble_advertising_start(BLE_ADV_MODE_SLOW);
     APP_ERROR_CHECK(err_code);
-
-    //APP_ERROR_CHECK(err_code);
-
-    //err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
-    //APP_ERROR_CHECK(err_code);
-    /**
-	err_code = (BLE_ADV_MODE_FAST);
-	APP_ERROR_CHECK(err_code);
-	*/
 }
 
 /**@brief Function for handling the data from the Nordic UART Service.
@@ -412,12 +391,34 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t lengt
 	    {
 	        switch(p_data[0])
 	        {
-            case 'm':
+	        /** Radio transmit power in dBm
+	         * (accepted values are -40, -30, -20, -16, -12, -8, -4, 0, and 4 dBm). */
+            case '1':
+            	err_code = ble_nus_string_send(p_nus, (uint8_t *) "Power set to -40", 16);
+            	APP_ERROR_CHECK(err_code);
+            	gap_tx_power = -40;
+            	err_code = sd_ble_gap_tx_power_set(gap_tx_power);
+            	APP_ERROR_CHECK(err_code);
                 break;
+            case '2':
+            	err_code = ble_nus_string_send(p_nus, (uint8_t *) "Power set to -20", 16);
+            	APP_ERROR_CHECK(err_code);
+            	gap_tx_power = -20;
+            	err_code = sd_ble_gap_tx_power_set(gap_tx_power);
+            	APP_ERROR_CHECK(err_code);
+            	break;
+            case '3':
+            	err_code = ble_nus_string_send(p_nus, (uint8_t *) "Power set to 0", 14);
+            	APP_ERROR_CHECK(err_code);
+            	gap_tx_power = 0;
+            	err_code = sd_ble_gap_tx_power_set(gap_tx_power);
+            	APP_ERROR_CHECK(err_code);
+            	break;
             case 'c':
             	;
             	storage_clear();
             	err_code = ble_nus_string_send(p_nus, (uint8_t *) "Storage cleared.", 16);
+            	APP_ERROR_CHECK(err_code);
             	break;
             case 'l':
             	;

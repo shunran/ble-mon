@@ -23,7 +23,7 @@
 //#undef PSTORAGE_MIN_BLOCK_SIZE
 //#define PSTORAGE_MIN_BLOCK_SIZE     4 // library min is 16
 #define STORE_BLOCK_SIZE	40
-#define STORE_BLOCK_COUNT	50 // 20 was ok
+#define STORE_BLOCK_COUNT	170
 
 static pstorage_handle_t m_p_storage_id;
 
