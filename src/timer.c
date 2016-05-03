@@ -21,10 +21,11 @@
 APP_TIMER_DEF(m_app_timer_id);
 
 uint8_t timer_epoch;
+#define TIMER_TIMEOUT_TICKS	65536 /** 2 * 32768; */
 
 void timers_start(void)
 {
-	uint32_t timeout_ticks = 100000; //3 * 32768;
+	uint32_t timeout_ticks = TIMER_TIMEOUT_TICKS;
     uint32_t err_code;
     err_code = app_timer_start(m_app_timer_id, timeout_ticks, NULL);
     APP_ERROR_CHECK(err_code);

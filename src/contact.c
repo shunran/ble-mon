@@ -18,6 +18,7 @@
 #include "storage.h"
 #include "gpio.h"
 
+#define CONTACT_MIN_RSSI		-98
 //contact contacts[NUMBER_OF_DEVICES];
 
 adv_report * reports;
@@ -118,8 +119,13 @@ void make_report(uint32_t counter, uint8_t epoch, int8_t rssi, uint8_t addr) {
 //	(reports + reports_idx++)->addr = addr;
 	//(reports + reports_idx) = &s_rep;
 //	if (reports_idx == 10) {
-		timer_event_indication = indicate_proximity;
-		store_report(get_ts(counter), epoch, rssi, addr);
+	if (rssi >= CONTACT_MIN_RSSI)
+		{
+			timer_event_indication = indicate_proximity;
+			store_report(get_ts(counter), epoch, rssi, addr);
+			__LOG("Contact from addr:%d rssi:%d", addr, rssi);
+		}
+
 //	}
 //	uint8_t curr_ts;
 //	curr_ts = calc_current_ts();

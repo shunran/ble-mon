@@ -33,9 +33,9 @@
 #include "contact.h"
 #include "storage.h"
 
-#define ADDRESS_OF_DEVICE	{0xC0, 0xFF, 0xEE, 0x00, 0x00, 0x03}
+#define ADDRESS_OF_DEVICE	{0xC0, 0xFF, 0xEE, 0x00, 0x00, 0x13}
 
-#define INITIAL_APP_GAP_TX_POWER	-20	/** Radio transmit power in dBm (accepted values are -40, -30, -20, -16, -12, -8, -4, 0, and 4 dBm). */
+#define INITIAL_APP_GAP_TX_POWER	-40	/** Radio transmit power in dBm (accepted values are -40, -30, -20, -16, -12, -8, -4, 0, and 4 dBm). */
 #define MIN_CONN_INTERVAL	MSEC_TO_UNITS(20, UNIT_1_25_MS)	/**< Minimum acceptable connection interval (0.1 seconds). */
 #define MAX_CONN_INTERVAL	MSEC_TO_UNITS(75, UNIT_1_25_MS)	/**< Maximum acceptable connection interval (0.2 second). */
 #define SLAVE_LATENCY	0	/**< Slave latency. */
@@ -277,6 +277,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
             __LOG("disco. scan start");
             scan_start();
             //initialize advertising again in case power level changed.
+            //advertised power is not by default tx power
             advertising_init();
             advertising_start();
             break;
@@ -294,7 +295,8 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
                                                  BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
                 APP_ERROR_CHECK(err_code);
             }
-        	__LOG("GATTS timeout. tee midagi selle kohaga.");
+            //TODO: manage timeout.
+        	__LOG("GATTS timeout.");
             break;
         case BLE_EVT_TX_COMPLETE:
             if (m_file_in_transit) ble_nus_data_transfer();

@@ -68,12 +68,6 @@ $(SDK_PATH)/components/softdevice/common/softdevice_handler/softdevice_handler.c
 $(SDK_PATH)/components/drivers_nrf/pstorage/pstorage.c \
 $(SDK_PATH)/components/ble/ble_services/ble_nus/ble_nus.c \
 $(SDK_PATH)/components/ble/ble_advertising/ble_advertising.c
-# $(SDK_PATH)/components/libraries/trace/app_trace.c \
-# $(SDK_PATH)/components/libraries/button/app_button.c
-# $(SDK_PATH)/components/libraries/uart/retarget.c \
-# $(SDK_PATH)/components/ble/device_manager/device_manager_peripheral.c \
-# $(abspath ../../../../../bsp/bsp.c) \
-# $(abspath ../../../../../bsp/bsp_btn_ble.c) \
 
 #assembly files common to all targets
 ASM_SOURCE_FILES  = $(abspath $(SDK_PATH)/components/toolchain/gcc/gcc_startup_nrf51.s)
@@ -116,8 +110,8 @@ OUTPUT_BINARY_DIRECTORY = $(OBJECT_DIRECTORY)
 BUILD_DIRECTORIES := $(sort $(OBJECT_DIRECTORY) $(OUTPUT_BINARY_DIRECTORY) $(LISTING_DIRECTORY) )
 
 #flags common to all targets
-CFLAGS  = -DBOARD_BLE400
-#CFLAGS  = -DBOARD_RADIOLAND
+#CFLAGS  = -DBOARD_BLE400
+CFLAGS  = -DBOARD_RADIOLAND
 #CFLAGS += -DUSE_UART_LOG
 CFLAGS += -DSOFTDEVICE_PRESENT
 CFLAGS += -DNRF51
@@ -154,7 +148,10 @@ ASMFLAGS += -x assembler-with-cpp
 #ASMFLAGS = -Wa,--defsym,__STACK_SIZE=0xC00
 
 ASMFLAGS +=-D__STACK_SIZE=0xB00
+# 0xB00
+# 0xC92
 ASMFLAGS += -D__HEAP_SIZE=0x500
+ASMFLAGS += -DNRF51
 # original 0x800
 #default target - first one defined
 default: clean ble-mon
