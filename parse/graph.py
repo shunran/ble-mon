@@ -33,7 +33,7 @@ def draw_pd(infile, outfilename):
     def get_legend_labels(legend_index_list):
         result = []
         for a in legend_index_list:
-            result.append("Actor %d" % a)
+            result.append("Actor %d" % (a+1))
         return result
 
     def get_legend_handles(addresses):
@@ -57,14 +57,11 @@ def draw_pd(infile, outfilename):
     ax.set_ylim(-75, -100)
 
 
-    # format the ticks
-    locator = dates.AutoDateLocator()
-    locator.intervald[dates.SECONDLY] = [20]
-
     #ax.set_title("Actor 2")
     ax.set_xlabel("time (min:sec)")
     ax.set_ylabel("RSSI (dBm)")
 
+    locator = dates.SecondLocator(interval=20)
     formatter = dates.DateFormatter('%M:%S')
 
     ax.xaxis.set_major_locator(locator)
@@ -72,8 +69,8 @@ def draw_pd(infile, outfilename):
     ax.autoscale_view()
     ax.grid(True)
     plt.legend(handles,labels, loc="lower right")
-    #plt.show()
-    plt.savefig(outfilename, format="png")
+    plt.show()
+    #plt.savefig(outfilename, format="png")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Graph ble-mon firmware log.')
