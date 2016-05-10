@@ -122,17 +122,11 @@ static void sys_evt_dispatch(uint32_t sys_evt)
  */
 static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
 {
-    //dm_ble_evt_handler(p_ble_evt);
     on_ble_evt(p_ble_evt);
     ble_conn_params_on_ble_evt(p_ble_evt);
     ble_nus_on_ble_evt(&m_nus, p_ble_evt);
     //TODO: no bsp
-    //bsp_btn_ble_on_ble_evt(p_ble_evt);
     ble_advertising_on_ble_evt(p_ble_evt);
-    /*YOUR_JOB add calls to _on_ble_evt functions from each service your application is using
-    ble_xxs_on_ble_evt(&m_xxs, p_ble_evt);
-    ble_yys_on_ble_evt(&m_yys, p_ble_evt);
-    */
 }
 
 
@@ -252,24 +246,15 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
             if (friend)
             {
                 make_report(NRF_RTC1->COUNTER, timer_epoch, p_adv_report->rssi, p_adv_report->peer_addr.addr[0]);
-            	//make_contact(p_adv_report->peer_addr.addr[0]);
-                /*__LOG("Target %02x %ddBm",
-                           p_adv_report->peer_addr.addr[0],
-      					 p_adv_report->rssi
-                           );*/
             }
            break;
         }
         case BLE_GAP_EVT_CONNECTED:
             err_code = NRF_SUCCESS;
-            // TODO: no bsp, rewrite
-            //bsp_indication_set(BSP_INDICATE_CONNECTED);
             sd_ble_gap_scan_stop();
             __LOG("conn. scan stopped");
             APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-            //sd_ble_gap_tx_power_set(0);
-            //scan_stop(); ????
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
@@ -309,16 +294,11 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
 
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 {
-	//uint32_t err_code;
-    //TODO: NO bsp, rewrite for ble400 board
     switch (ble_adv_evt)
     {
         case BLE_ADV_EVT_SLOW: // 4
-           //err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
-            //APP_ERROR_CHECK(err_code);
             break;
         case BLE_ADV_EVT_IDLE: // 0
-            //sleep_mode_enter();
             break;
         default:
             break;
@@ -553,8 +533,6 @@ static void ble_nus_data_transfer()
         {
             APP_ERROR_CHECK(err_code);
         }
-        //__LOG("Getting data with len: %d", m_data_length);
         read_store_data(m_nus_data, &m_data_length);
-        //back_data_ble_nus_fill(m_data, &m_data_length);
     }
 }

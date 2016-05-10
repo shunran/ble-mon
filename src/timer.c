@@ -44,24 +44,14 @@ void timeout_handler(void * p_context)
 	// OVERFLW event has happened.
 	if (last_time > this_time) ++timer_epoch;
 
-	//contact_get_current_time();
-	//init_contacts();
 	close_contacts();
 	if (timer_event_indication) {
 		(*timer_event_indication)();
-		//void * s = &timer_event_indication;
 		timer_event_indication = NULL;
-		//(*timer_event_indication)(void) = NULL;
 	}
 
 	last_time = this_time;
 
-
-  //  UNUSED_PARAMETER(p_context);
-  //stop the timer(s):
-  //uint32_t err_code;
-  //err_code = app_timer_stop(m_app_timer_id);
-  //APP_ERROR_CHECK(err_code);
 }
 
 /**@brief Function for the Timer initialization.

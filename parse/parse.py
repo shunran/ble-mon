@@ -2,6 +2,7 @@
 from datetime import datetime, date, time, timedelta
 import re
 import argparse
+from statistics import median, mean
 
 def make_data(infile):
     time_sync, hex_array = parse_hex_array_from_file(infile)
@@ -35,8 +36,8 @@ def get_reference_time(time_dict):
     telephone_time = time(time_dict['hour'], time_dict['min'], sec, usec)
     telephone_date = date.today()
     telephone_datetime = datetime.combine(telephone_date, telephone_time)
-    ''' 32kHz RTC is used'''
-    ts_sec = (time_dict['ts'] + time_dict['epoch'] * 16777215) / 32768
+    '''32kHz RTC is used, this is unconverted tick count'''
+    ts_sec = (time_dict['ts'] + time_dict['epoch'] * 0xFFFFFF) / 32768
     zero_point = telephone_datetime - timedelta(seconds=ts_sec)
     return zero_point
 
@@ -47,8 +48,8 @@ def get_ts_in_sec(ts, epoch = 0):
      by 0x10101
 
     '''
-    ts2 = ts * 65793 / 32768 + epoch * 255
-    return ts2
+    sec = (ts + epoch * 0xFF ) * 0x10101 / 32768#+ epoch * 0xFF
+    return sec
 
 
 def chunks(l, n):
@@ -66,9 +67,6 @@ def parse_hex_array_from_file(infile):
             if no_time_sync:
                 match = re.search(b'(\d+):(\d+):(.*)\t"ts:(\d+) epoch:(\d+)', row)
                 if match:
-                    print(row) #"ts:11635953 epoch:0"
-                    print("timestamp")
-                    print(match.group(1),match.group(2), match.group(3), match.group(4), match.group(5))
                     time_sync['hour'] = int(match.group(1))
                     time_sync['min'] = int(match.group(2))
                     time_sync['sec'] = float(match.group(3))
@@ -87,9 +85,8 @@ def parse_hex_array_from_file(infile):
                 else:
                     match = re.search(b'value: \(0x\) (.*)', row)
                     if match:
-                        #print(match.group(1).decode('utf-8'))
-                        #data = re.split('-',match.group(1).decode('utf-8'))
-                        #print(data[0], data[1], int('0x' + data[0], 16))
+                        if match.group(1) == b"FF-FF-FF-FF-FF-FF-FF-FF-FF-FF-FF-FF-FF-FF-FF-FF-FF-FF-FF-FF":
+                            continue #not useful data, empty storage space is full of FF
                         hex_array.extend(re.split('-', match.group(1).decode('utf-8')))
                     else:
                         pass
@@ -99,10 +96,12 @@ def write_data(ref_time, data_dict, outfile):
     with open(outfile, "w") as f:
         for sec in sorted(data_dict.keys()):
             for address in data_dict[sec]:
-                avg_rssi =  sum(data_dict[sec][address]) / len(data_dict[sec][address])
+                avg_rssi =  mean(data_dict[sec][address])
+                median_rssi = median(data_dict[sec][address])
                 count_rssi = len(data_dict[sec][address])
                 time = ref_time + timedelta(seconds=sec)
-                f.write("%d:%d:%d.%d\t%d\t%.2f\t%d\n" % (time.hour, time.minute, time.second, time.microsecond, address, avg_rssi, count_rssi))
+                #f.write("%d:%d:%d.%d\t%d\t%.2f\t%d\n" % (time.hour, time.minute, time.second, time.microsecond, address, avg_rssi, count_rssi))
+                f.write("%s\t%d\t%.2f\t%d\t%d\n" % (time, address, avg_rssi, median_rssi, count_rssi))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process ble-mon firmware log.')

@@ -45,7 +45,6 @@ static uint32_t initiate_write();
 static void fill_data(uint8_t *, uint8_t *);
 
 
-//static void storage_callback(pstorage_handle_t  *, uint8_t,  uint32_t, uint8_t*,uint32_t);
 static void storage_callback(pstorage_handle_t  * handle,
 	                               uint8_t              op_code,
 	                               uint32_t             result,
@@ -152,27 +151,6 @@ void storage_init()
     //memset()
 }
 
-//uint32_t store_contact(contact row) {
-//	uint32_t err_code = NRF_SUCCESS;
-//
-//	if (operation_lock || manual_lock) {
-//		//TODO: check it from contact side and dont clear the contact.
-//		//Write or read in progress, dont do anything.
-//		__LOG("write was busy");
-//		err_code = NRF_ERROR_BUSY;
-//		return err_code;
-//	}
-//	write_cache[w_cache_curr_idx++] = row.address;
-//	write_cache[w_cache_curr_idx++] = row.first_epoch;
-//	write_cache[w_cache_curr_idx++] = row.first_time_seen;
-//	write_cache[w_cache_curr_idx++] = row.last_epoch;
-//	write_cache[w_cache_curr_idx++] = row.last_time_seen;
-//	if (w_cache_curr_idx == STORE_BLOCK_SIZE) {
-//		if (!operation_lock && !manual_lock)
-//			err_code = initiate_write();
-//	};
-//	return err_code;
-//}
 
 
 uint32_t store_report(uint8_t ts, uint8_t epoch, int8_t rssi, uint8_t addr) {
@@ -192,11 +170,6 @@ uint32_t store_report(uint8_t ts, uint8_t epoch, int8_t rssi, uint8_t addr) {
 	if (w_cache_curr_idx >= STORE_BLOCK_SIZE) {
 		err_code = initiate_write();
 	};
-	//__LOG("Write cache idx %d", write_cache_curr_idx);
-	/*while (storage_locked) { // seems to lock, doesnt work.
-		err_code = sd_app_evt_wait();
-		APP_ERROR_CHECK(err_code);
-	}*/
 	return err_code;
 }
 
@@ -226,23 +199,6 @@ static uint32_t initiate_write() {
 	return err_code;
 }
 
-/*
-static uint32_t initiate_read()
-{
-	uint32_t err_code = NRF_SUCCESS;
-	pstorage_handle_t block_handle;
-    err_code = pstorage_block_identifier_get(&m_p_storage_id, 0, &block_handle);
-    APP_ERROR_CHECK(err_code);
-	//err_code = pstorage_load(row, &block_handle, STORE_BLOCK_SIZE, 0);
-    APP_ERROR_CHECK(err_code);
-	//pstorage_handle_t block_handle;
-	__LOG("Initiated flash write.");
-	operation_lock = true; // cb will unlock this.
-	//err_code = pstorage_store(&block_handle, storage_cache, STORE_BLOCK_SIZE, 0);
-	APP_ERROR_CHECK(err_code);
-	return err_code;
-}*/
-
 void store_read_init(void)
 {
     // Initialize data transfer
@@ -271,17 +227,12 @@ static void fill_data(uint8_t * nus_storage, uint8_t * nus_length )
     	} else {
     		if (r_blix < STORE_BLOCK_COUNT)	//there are still blocks;
     		{
-    			//__LOG("trying to get block id %d", blix);
     	        err_code = pstorage_block_identifier_get(&m_p_storage_id, r_blix, &block_handle);
-    			//__LOG("got block id %d with err %d", blix, err_code);
     	        APP_ERROR_CHECK(err_code);
     	        operation_lock = true;
     	    	err_code = pstorage_load(read_cache, &block_handle, STORE_BLOCK_SIZE, 0);
     	        APP_ERROR_CHECK(err_code);
     		} else {
-    			//loaded all blocks
-    			//blix = 0;
-    			//__LOG("%x", write_cache[39]);
     			break; //nothing more to send
     		}
     	}
@@ -301,20 +252,3 @@ bool storage_toggle_lock()
 	__LOG("Manual lock is now %d", manual_lock);
 	return manual_lock;
 }
-
-/**@brief Wait if there is any flash access pending
-*
-void wait_flash_op(void)
-{
-    uint32_t    err_code;
-    uint32_t    count;
-
-    do
-    {
-        app_sched_execute();
-        err_code = pstorage_access_status_get(&count);
-        APP_ERROR_CHECK(err_code);
-    }
-    while (count);
-}
-pstorage_access_status_get()*/
